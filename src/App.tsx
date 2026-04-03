@@ -3,10 +3,20 @@ import { Navbar } from './components/Navbar';
 import { Home } from './pages/Home';
 import { Cart } from './pages/Cart';
 import { Profile } from './pages/Profile';
+import { Checkout } from './pages/Checkout';
 import { Admin } from './pages/Admin';
 import { CategoryView } from './pages/CategoryView';
 import { useState, useEffect } from 'react';
 import { Moon, Sun, Download } from 'lucide-react';
+
+// Automatically scrolls to top on every route change
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 // Saves current route to localStorage so it persists across reloads
 function RouteTracker() {
@@ -75,6 +85,7 @@ function App() {
   return (
     <Router>
       <RouteTracker />
+      <ScrollToTop />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 pb-20 selection:bg-brand-200 transition-colors">
         <header className="bg-white dark:bg-gray-900 p-4 shadow-sm sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800 max-w-md mx-auto flex items-center justify-between">
           <div className="w-8 h-8 flex items-center justify-center">
@@ -99,6 +110,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/category/:subCategoryId" element={<CategoryView />} />
             <Route path="/cart" element={<Cart />} />
+            <Route path="/checkout" element={<Checkout />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<Admin />} />
           </Routes>

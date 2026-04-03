@@ -19,6 +19,7 @@ export interface Order {
   order_mode: 'delivery' | 'takeaway';
   status: 'pending' | 'preparing' | 'completed' | 'cancelled';
   payment_screenshot_url: string | null;
+  utr_number: string | null;
   created_at: string;
 }
 
@@ -63,6 +64,7 @@ interface AppState {
   cart: CartItem[];
   products: Product[];
   orders: Order[];
+  adminOrders: Order[];
   verifications: VerificationRequest[];
   orderMode: 'delivery' | 'takeaway';
   setOrderMode: (mode: 'delivery' | 'takeaway') => void;
@@ -81,9 +83,10 @@ interface AppState {
   updateProduct: (productId: string, updates: Partial<Product>) => Promise<void>;
   fetchOrders: () => Promise<void>;
   fetchUserOrders: (email: string) => Promise<void>;
-  placeOrder: (paymentScreenshot?: string) => Promise<{ success: boolean; error?: string }>;
+  placeOrder: (paymentScreenshot: string, utrNumber: string) => Promise<{ success: boolean; error?: string }>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
   getTotalPrice: () => number;
+  userPhones: Record<string, string>; // Maps email to last used phone
 }
 
 export const useStore = create<AppState>()(
@@ -92,18 +95,24 @@ export const useStore = create<AppState>()(
       user: null,
       cart: [],
       orders: [],
+      adminOrders: [],
       verifications: [],
       orderMode: 'delivery',
       setOrderMode: (mode) => set({ orderMode: mode }),
       setUser: (user) => set({ user }),
+      userPhones: {},
       loginWithEmail: (email, name, avatarUrl) => {
+        const state = get();
+        // Look up phone from our record map
+        const existingPhone = state.userPhones[email] || '';
+        
         const studentDetected = isStudentEmail(email);
         set({
           user: {
-            id: `u_${Date.now()}`,
+            id: (state.user && state.user.email === email) ? state.user.id : `u_${Date.now()}`,
             full_name: name,
             email,
-            phone: '',
+            phone: existingPhone,
             avatar_url: avatarUrl,
             is_student: studentDetected,
             verification_status: studentDetected ? 'verified' : 'none',
@@ -111,9 +120,10 @@ export const useStore = create<AppState>()(
         });
       },
       updatePhone: (phone) => set((state) => ({
-        user: state.user ? { ...state.user, phone } : null
+        user: state.user ? { ...state.user, phone } : null,
+        userPhones: state.user ? { ...state.userPhones, [state.user.email]: phone } : state.userPhones
       })),
-      logoutUser: () => set({ user: null, cart: [], orders: [] }),
+      logoutUser: () => set({ user: null, cart: [], orders: [], adminOrders: [] }),
       
       submitVerification: (idCardUrl) => set((state) => {
         if (!state.user) return state;
@@ -213,7 +223,7 @@ export const useStore = create<AppState>()(
       fetchOrders: async () => {
         const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
         if (!error && data) {
-          set({ orders: data as Order[] });
+          set({ adminOrders: data as Order[] });
         } else {
           console.error('Error fetching orders:', error);
         }
@@ -226,7 +236,7 @@ export const useStore = create<AppState>()(
           console.error('Error fetching user orders:', error);
         }
       },
-      placeOrder: async (paymentScreenshot) => {
+      placeOrder: async (paymentScreenshot, utrNumber) => {
         const { user, cart, orderMode, getTotalPrice } = get();
         if (!user || cart.length === 0) return { success: false, error: 'No user or empty cart' };
 
@@ -240,6 +250,7 @@ export const useStore = create<AppState>()(
           order_mode: orderMode,
           status: 'pending',
           payment_screenshot_url: paymentScreenshot || null,
+          utr_number: utrNumber || null,
         };
 
         const { data, error } = await supabase.from('orders').insert([newOrder]).select();
@@ -268,8 +279,10 @@ export const useStore = create<AppState>()(
         }
       },
       updateOrderStatus: async (orderId, status) => {
+        // Optimistic update for both lists
         set((state) => ({
-          orders: state.orders.map(o => o.id === orderId ? { ...o, status } : o)
+          orders: state.orders.map(o => o.id === orderId ? { ...o, status } : o),
+          adminOrders: state.adminOrders.map(o => o.id === orderId ? { ...o, status } : o)
         }));
 
         const { error } = await supabase
@@ -278,7 +291,7 @@ export const useStore = create<AppState>()(
           .eq('id', orderId);
 
         if (error) {
-          console.error('Error updating order status:', error);
+          console.error('Error updating status:', error);
         }
       },
       getTotalPrice: () => {
