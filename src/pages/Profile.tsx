@@ -9,6 +9,13 @@ export const Profile = () => {
   // Phone collection state (Mandatory after Google login)
   const [phoneInput, setPhoneInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Phone editing state
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [editPhoneValue, setEditPhoneValue] = useState('');
+  const [altPhone, setAltPhone] = useState('');
+  const [isEditingAltPhone, setIsEditingAltPhone] = useState(false);
+  const [altPhoneValue, setAltPhoneValue] = useState('');
 
   // Fetch orders regularly for live updates
   useEffect(() => {
@@ -331,12 +338,115 @@ export const Profile = () => {
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Email</span>
             <span className="text-sm font-black text-gray-900 dark:text-white truncate max-w-[180px]">{user.email}</span>
           </div>
-          <div className="flex justify-between items-center py-1">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Phone</span>
-            <div className="flex items-center gap-2 text-sm font-black text-gray-900 dark:text-white">
-              {user.phone ? `+91 ${user.phone}` : '—'}
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+          
+          {/* Editable Primary Phone */}
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Primary Phone</span>
+              {!isEditingPhone ? (
+                <button 
+                  onClick={() => { setIsEditingPhone(true); setEditPhoneValue(user.phone || ''); }}
+                  className="text-[10px] font-black text-brand-500 uppercase tracking-wider"
+                >
+                  {user.phone ? 'Edit' : '+ Add'}
+                </button>
+              ) : (
+                <button 
+                  onClick={() => setIsEditingPhone(false)}
+                  className="text-[10px] font-black text-gray-400 uppercase tracking-wider"
+                >
+                  Cancel
+                </button>
+              )}
             </div>
+            {!isEditingPhone ? (
+              <div className="flex items-center gap-2 text-sm font-black text-gray-900 dark:text-white">
+                {user.phone ? `+91 ${user.phone}` : <span className="text-gray-400 font-medium italic text-xs">Not added yet</span>}
+                {user.phone && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>}
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">+91</span>
+                  <input
+                    type="tel"
+                    maxLength={10}
+                    autoFocus
+                    value={editPhoneValue}
+                    onChange={(e) => setEditPhoneValue(e.target.value.replace(/\D/g, ''))}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-12 pr-3 text-sm font-bold outline-none focus:border-brand-500"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    if (editPhoneValue.length === 10) {
+                      updatePhone(editPhoneValue);
+                      setIsEditingPhone(false);
+                    } else {
+                      alert('Please enter a valid 10-digit number');
+                    }
+                  }}
+                  className="bg-brand-500 text-white font-black text-xs px-4 rounded-xl active:scale-95 transition-all"
+                >
+                  Save
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Alternate Phone */}
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Alternate Phone</span>
+              {!isEditingAltPhone ? (
+                <button 
+                  onClick={() => { setIsEditingAltPhone(true); setAltPhoneValue(altPhone); }}
+                  className="text-[10px] font-black text-brand-500 uppercase tracking-wider"
+                >
+                  {altPhone ? 'Edit' : '+ Add'}
+                </button>
+              ) : (
+                <button 
+                  onClick={() => setIsEditingAltPhone(false)}
+                  className="text-[10px] font-black text-gray-400 uppercase tracking-wider"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+            {!isEditingAltPhone ? (
+              <div className="flex items-center gap-2 text-sm font-black text-gray-900 dark:text-white">
+                {altPhone ? `+91 ${altPhone}` : <span className="text-gray-400 font-medium italic text-xs">Not added yet</span>}
+                {altPhone && <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>}
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">+91</span>
+                  <input
+                    type="tel"
+                    maxLength={10}
+                    autoFocus
+                    value={altPhoneValue}
+                    onChange={(e) => setAltPhoneValue(e.target.value.replace(/\D/g, ''))}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-12 pr-3 text-sm font-bold outline-none focus:border-brand-500"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    if (altPhoneValue.length === 10) {
+                      setAltPhone(altPhoneValue);
+                      setIsEditingAltPhone(false);
+                    } else {
+                      alert('Please enter a valid 10-digit number');
+                    }
+                  }}
+                  className="bg-brand-500 text-white font-black text-xs px-4 rounded-xl active:scale-95 transition-all"
+                >
+                  Save
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
