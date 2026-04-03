@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
-import { Navigation, Upload, CheckCircle2, Edit3, Ticket, ShoppingBag, Package } from 'lucide-react';
+import { Navigation, Upload, CheckCircle2, Edit3, Ticket, ShoppingBag, Package, Copy } from 'lucide-react';
 import { calculateDistance, RESTAURANT_COORDS, MAX_DELIVERY_RADIUS_KM } from '../utils/geo';
 
 export const Cart = () => {
@@ -294,9 +294,25 @@ export const Cart = () => {
         <h3 className="font-black text-sm mb-2 text-gray-900 dark:text-white uppercase tracking-wider">Payment via UPI</h3>
         <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-6 font-bold uppercase tracking-widest">Pay securely using any UPI app</p>
 
-        <div className="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-2xl p-6 mb-6 text-center animate-in zoom-in duration-300">
-          <p className="text-xs text-brand-600 dark:text-brand-400 font-bold uppercase tracking-widest mb-2">Send exactly ₹{grandTotal} to:</p>
-          <p className="text-xl font-black text-brand-700 dark:text-brand-300 selection:bg-brand-200">soundarahari@fam</p>
+        <a
+          href={`upi://pay?pa=soundarahari@fam&pn=JKRestaurant&am=${grandTotal}&cu=INR`}
+          className="w-full bg-[#6528df] text-white font-black py-4 rounded-2xl flex items-center justify-center mb-4 cursor-pointer hover:bg-opacity-90 shadow-xl shadow-[#6528df]/20 transition-all active:scale-95 text-sm"
+        >
+          Pay ₹{grandTotal} with UPI App
+        </a>
+
+        <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-3 mb-6">
+          <p className="text-sm font-bold text-gray-700 dark:text-gray-300">soundarahari@fam</p>
+          <button 
+            onClick={() => {
+              navigator.clipboard.writeText('soundarahari@fam');
+              alert('UPI ID copied to clipboard!');
+            }}
+            className="flex items-center gap-1.5 bg-white dark:bg-gray-700 px-3 py-1.5 rounded-lg shadow-sm text-xs font-bold text-gray-600 dark:text-gray-300 active:scale-95 transition-all outline-none"
+          >
+            <Copy size={12} />
+            Copy
+          </button>
         </div>
 
         <div className="border-t border-gray-50 dark:border-gray-800 pt-6">

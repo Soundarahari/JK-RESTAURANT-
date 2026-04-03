@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProductCard } from '../components/ProductCard';
-import { Search, Flame, Award, Leaf, Utensils, Popcorn, Truck, GlassWater, ArrowUp } from 'lucide-react';
+import { Search, Flame, Utensils, Popcorn, Truck, GlassWater, ArrowUp } from 'lucide-react';
 import { useStore } from '../store';
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -44,7 +44,6 @@ export const Home = () => {
 
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'All' | 'Bestseller' | 'Spicy' | 'PureVeg'>('All');
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartTotal = getTotalPrice();
@@ -58,14 +57,10 @@ export const Home = () => {
       const matchCat = activeCategory === 'All' || p.category === activeCategory;
       const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (p.description || '').toLowerCase().includes(searchQuery.toLowerCase());
-      const matchSmart = activeFilter === 'All' ||
-        (activeFilter === 'Bestseller' && p.bestseller) ||
-        (activeFilter === 'Spicy' && p.spicy) ||
-        (activeFilter === 'PureVeg' && p.is_veg);
 
-      return matchCat && matchSearch && matchSmart;
+      return matchCat && matchSearch;
     });
-  }, [products, activeCategory, searchQuery, activeFilter]);
+  }, [products, activeCategory, searchQuery]);
 
   const categoryGroups = useMemo(() => {
     const groupOrder = ['Meals', 'Chinese', 'Snacks', 'Fast Food', 'Coolers'];
@@ -114,19 +109,6 @@ export const Home = () => {
         </div>
         {/* Curved bottom */}
         <div className="absolute -bottom-1 left-0 right-0 h-4 bg-gray-50 dark:bg-gray-950 rounded-t-[20px]"></div>
-      </div>
-
-      {/* Smart Filters */}
-      <div className="flex gap-2 mb-3 overflow-x-auto hide-scrollbar pb-1">
-        <button onClick={() => setActiveFilter(activeFilter === 'Bestseller' ? 'All' : 'Bestseller')} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-[11px] font-bold transition-all whitespace-nowrap ${activeFilter === 'Bestseller' ? 'bg-amber-500 border-amber-500 text-white shadow-md shadow-amber-200/50 dark:shadow-amber-900/30' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300'}`}>
-          <Award size={13} /> Bestseller
-        </button>
-        <button onClick={() => setActiveFilter(activeFilter === 'Spicy' ? 'All' : 'Spicy')} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-[11px] font-bold transition-all whitespace-nowrap ${activeFilter === 'Spicy' ? 'bg-red-500 border-red-500 text-white shadow-md shadow-red-200/50 dark:shadow-red-900/30' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300'}`}>
-          <Flame size={13} /> Spicy
-        </button>
-        <button onClick={() => setActiveFilter(activeFilter === 'PureVeg' ? 'All' : 'PureVeg')} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-[11px] font-bold transition-all whitespace-nowrap ${activeFilter === 'PureVeg' ? 'bg-green-500 border-green-500 text-white shadow-md shadow-green-200/50 dark:shadow-green-900/30' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300'}`}>
-          <Leaf size={13} /> Pure Veg
-        </button>
       </div>
 
       {/* Category Pills */}
@@ -200,9 +182,9 @@ export const Home = () => {
         <div className="text-center py-16 animate-fade-in">
           <div className="text-5xl mb-3">🍽️</div>
           <p className="text-gray-500 dark:text-gray-400 font-semibold text-sm">No dishes found</p>
-          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Try a different search or filter</p>
+          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Try a different search</p>
           <button
-            onClick={() => { setSearchQuery(''); setActiveFilter('All'); setActiveCategory('All'); }}
+            onClick={() => { setSearchQuery(''); setActiveCategory('All'); }}
             className="mt-4 bg-brand-500 text-white font-bold text-xs uppercase px-6 py-2 rounded-full shadow-md hover:bg-brand-600 transition-colors tracking-wider"
           >
             Clear All Filters
@@ -237,7 +219,7 @@ export const Home = () => {
       {showTopBtn && (
         <button
           onClick={scrollToTop}
-          className={`fixed right-4 z-40 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full w-12 h-12 flex items-center justify-center shadow-lg transition-all animate-in fade-in zoom-in hover:scale-110 ${cart.length > 0 ? 'bottom-[136px]' : 'bottom-[88px]'}`}
+          className={`fixed right-4 z-50 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full w-12 h-12 flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all animate-in fade-in zoom-in hover:scale-110 ${cart.length > 0 ? 'bottom-[160px]' : 'bottom-[100px]'}`}
           aria-label="Back to top"
         >
           <ArrowUp size={24} />

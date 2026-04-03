@@ -113,7 +113,7 @@ export const useStore = create<AppState>()(
       updatePhone: (phone) => set((state) => ({
         user: state.user ? { ...state.user, phone } : null
       })),
-      logoutUser: () => set({ user: null, cart: [] }),
+      logoutUser: () => set({ user: null, cart: [], orders: [] }),
       
       submitVerification: (idCardUrl) => set((state) => {
         if (!state.user) return state;
