@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
-import { Navigation, Upload, CheckCircle2, Edit3, Ticket, ShoppingBag, Package, Copy, ArrowLeft } from 'lucide-react';
+import { Navigation, Upload, CheckCircle2, Edit3, ShoppingBag, Package, Copy, ArrowLeft } from 'lucide-react';
 import { calculateDistance, RESTAURANT_COORDS, MAX_DELIVERY_RADIUS_KM } from '../utils/geo';
 
 export const Checkout = () => {
@@ -14,8 +14,6 @@ export const Checkout = () => {
   const [utrNumber, setUtrNumber] = useState('');
   const [orderComplete, setOrderComplete] = useState(false);
   const [cookingInstructions, setCookingInstructions] = useState('');
-  const [couponCode, setCouponCode] = useState('');
-  const [isCouponApplied, setIsCouponApplied] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   const itemTotal = getTotalPrice();
@@ -25,17 +23,7 @@ export const Checkout = () => {
   const isTooFar = !isTakeaway && distance !== null && distance > MAX_DELIVERY_RADIUS_KM;
   const deliveryFee = isTakeaway ? 0 : (distance !== null && distance <= MAX_DELIVERY_RADIUS_KM ? (distance > 3 ? 40 : 20) : 0);
   
-  const handleApplyCoupon = () => {
-    if (couponCode.toUpperCase() === 'WELCOME50') {
-      setIsCouponApplied(true);
-    } else {
-      alert('Invalid Coupon Code');
-      setIsCouponApplied(false);
-    }
-  };
-
-  const discount = isCouponApplied ? 50 : 0;
-  const grandTotal = itemTotal + (isTakeaway ? 0 : platformFee) + gstAndCharges + deliveryFee - discount;
+  const grandTotal = itemTotal + (isTakeaway ? 0 : platformFee) + gstAndCharges + deliveryFee;
 
   const handleLocate = () => {
     setIsLocating(true);
