@@ -59,12 +59,24 @@ export interface VerificationRequest {
   created_at: string;
 }
 
+export interface Customer {
+  id: string;
+  email: string;
+  name: string;
+  phone: string;
+  avatar_url?: string;
+  is_student: boolean;
+  created_at: string;
+  last_login: string;
+}
+
 interface AppState {
   user: UserProfile | null;
   cart: CartItem[];
   products: Product[];
   orders: Order[];
   adminOrders: Order[];
+  customers: Customer[];
   verifications: VerificationRequest[];
   orderMode: 'delivery' | 'takeaway';
   setOrderMode: (mode: 'delivery' | 'takeaway') => void;
@@ -82,11 +94,12 @@ interface AppState {
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   updateProduct: (productId: string, updates: Partial<Product>) => Promise<void>;
   fetchOrders: () => Promise<void>;
+  fetchCustomers: () => Promise<void>;
   fetchUserOrders: (email: string) => Promise<void>;
   placeOrder: (paymentScreenshot: string, utrNumber: string) => Promise<{ success: boolean; error?: string }>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
   getTotalPrice: () => number;
-  userPhones: Record<string, string>; // Maps email to last used phone
+  userPhones: Record<string, string>;
 }
 
 export const useStore = create<AppState>()(
@@ -96,6 +109,7 @@ export const useStore = create<AppState>()(
       cart: [],
       orders: [],
       adminOrders: [],
+      customers: [],
       verifications: [],
       orderMode: 'delivery',
       setOrderMode: (mode) => set({ orderMode: mode }),
@@ -117,6 +131,18 @@ export const useStore = create<AppState>()(
             is_student: studentDetected,
             verification_status: studentDetected ? 'verified' : 'none',
           }
+        });
+
+        // Upsert into customers table for admin visibility
+        supabase.from('customers').upsert({
+          email,
+          name,
+          phone: existingPhone,
+          avatar_url: avatarUrl || null,
+          is_student: studentDetected,
+          last_login: new Date().toISOString(),
+        }, { onConflict: 'email' }).then(({ error }) => {
+          if (error) console.error('Error upserting customer:', error);
         });
       },
       updatePhone: (phone) => set((state) => ({
@@ -226,6 +252,14 @@ export const useStore = create<AppState>()(
           set({ adminOrders: data as Order[] });
         } else {
           console.error('Error fetching orders:', error);
+        }
+      },
+      fetchCustomers: async () => {
+        const { data, error } = await supabase.from('customers').select('*').order('last_login', { ascending: false });
+        if (!error && data) {
+          set({ customers: data as Customer[] });
+        } else {
+          console.error('Error fetching customers:', error);
         }
       },
       fetchUserOrders: async (email) => {

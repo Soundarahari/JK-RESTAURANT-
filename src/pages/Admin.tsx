@@ -5,7 +5,7 @@ import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, Che
 import { useNavigate } from 'react-router-dom';
 
 export const Admin = () => {
-  const { products, updateProduct, addProduct, fetchProducts, user, verifications, updateVerificationStatus, adminOrders, fetchOrders, updateOrderStatus } = useStore();
+  const { products, updateProduct, addProduct, fetchProducts, user, verifications, updateVerificationStatus, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus } = useStore();
   const navigate = useNavigate();
   
   // 1. Admin Authorization check first
@@ -36,15 +36,18 @@ export const Admin = () => {
   const [selectedUser, setSelectedUserDetails] = useState<{name: string, email: string, phone: string, is_student: boolean} | null>(null);
   const [enlargedScreenshot, setEnlargedScreenshot] = useState<string | null>(null);
 
-  // 3. Side Effects (Data Fetching)
   useEffect(() => {
     fetchProducts();
     if (isAdmin) {
       fetchOrders();
-      const interval = setInterval(fetchOrders, 30000);
+      fetchCustomers();
+      const interval = setInterval(() => {
+        fetchOrders();
+        fetchCustomers();
+      }, 30000);
       return () => clearInterval(interval);
     }
-  }, [fetchProducts, fetchOrders, isAdmin]);
+  }, [fetchProducts, fetchOrders, fetchCustomers, isAdmin]);
 
   if (!isAdmin) {
     return (
@@ -136,27 +139,16 @@ export const Admin = () => {
     .filter(o => o.status === 'completed')
     .reduce((sum, o) => sum + o.total_amount, 0);
 
-  // Derived Users List
+  // Users from dedicated customers table
   const uniqueUsers = useMemo(() => {
-    const userMap = new Map<string, {name: string, email: string, phone: string, is_student: boolean, orderCount: number}>();
-    
-    adminOrders.forEach(order => {
-      if (!userMap.has(order.user_email)) {
-        userMap.set(order.user_email, {
-          name: order.user_name,
-          email: order.user_email,
-          phone: order.user_phone,
-          is_student: order.user_email.includes('.ac.in') || order.user_email.includes('jkkn') || order.user_email.includes('ssm'), // Simplified check
-          orderCount: 1
-        });
-      } else {
-        const u = userMap.get(order.user_email)!;
-        u.orderCount += 1;
-      }
-    });
-
-    return Array.from(userMap.values());
-  }, [adminOrders]);
+    return customers.map(c => ({
+      name: c.name,
+      email: c.email,
+      phone: c.phone,
+      is_student: c.is_student,
+      orderCount: adminOrders.filter(o => o.user_email === c.email).length
+    }));
+  }, [customers, adminOrders]);
 
   const filteredUsers = useMemo(() => {
     return uniqueUsers.filter(u => 
