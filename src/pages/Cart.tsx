@@ -294,12 +294,10 @@ export const Cart = () => {
         <h3 className="font-black text-sm mb-2 text-gray-900 dark:text-white uppercase tracking-wider">Payment via UPI</h3>
         <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-6 font-bold uppercase tracking-widest">Pay securely using any UPI app</p>
 
-        <a
-          href={`upi://pay?pa=restaurant@ybl&pn=JKRestaurant&am=${grandTotal}&cu=INR`}
-          className="w-full bg-[#6528df] text-white font-black py-4 rounded-2xl flex items-center justify-center mb-6 cursor-pointer hover:bg-opacity-90 shadow-xl shadow-[#6528df]/20 transition-all active:scale-95 text-sm"
-        >
-          Pay ₹{grandTotal} with UPI
-        </a>
+        <div className="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-2xl p-6 mb-6 text-center animate-in zoom-in duration-300">
+          <p className="text-xs text-brand-600 dark:text-brand-400 font-bold uppercase tracking-widest mb-2">Send exactly ₹{grandTotal} to:</p>
+          <p className="text-xl font-black text-brand-700 dark:text-brand-300 selection:bg-brand-200">soundarahari@fam</p>
+        </div>
 
         <div className="border-t border-gray-50 dark:border-gray-800 pt-6">
           <p className="text-[10px] font-black mb-3 text-gray-400 uppercase tracking-widest">Upload Screenshot</p>

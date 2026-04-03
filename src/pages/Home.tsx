@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProductCard } from '../components/ProductCard';
-import { Search, Flame, Award, Leaf, Utensils, Popcorn, Truck, GlassWater } from 'lucide-react';
+import { Search, Flame, Award, Leaf, Utensils, Popcorn, Truck, GlassWater, ArrowUp } from 'lucide-react';
 import { useStore } from '../store';
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -27,6 +27,20 @@ export const Home = () => {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  const [showTopBtn, setShowTopBtn] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowTopBtn(window.scrollY > 300);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -217,6 +231,17 @@ export const Home = () => {
             <span className="font-black text-sm">₹{cartTotal}</span>
           </button>
         </div>
+      )}
+
+      {/* Back to Top Button */}
+      {showTopBtn && (
+        <button
+          onClick={scrollToTop}
+          className={`fixed right-4 z-40 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full w-12 h-12 flex items-center justify-center shadow-lg transition-all animate-in fade-in zoom-in hover:scale-110 ${cart.length > 0 ? 'bottom-[136px]' : 'bottom-[88px]'}`}
+          aria-label="Back to top"
+        >
+          <ArrowUp size={24} />
+        </button>
       )}
     </div>
   );
