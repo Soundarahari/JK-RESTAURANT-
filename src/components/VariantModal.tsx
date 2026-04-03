@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Product } from '../data/mock';
 import { useStore } from '../store';
 import { Plus, Minus, X } from 'lucide-react';
