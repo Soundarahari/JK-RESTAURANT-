@@ -145,10 +145,23 @@ export const useStore = create<AppState>()(
           if (error) console.error('Error upserting customer:', error);
         });
       },
-      updatePhone: (phone) => set((state) => ({
-        user: state.user ? { ...state.user, phone } : null,
-        userPhones: state.user ? { ...state.userPhones, [state.user.email]: phone } : state.userPhones
-      })),
+      updatePhone: (phone) => {
+        const state = get();
+        set({
+          user: state.user ? { ...state.user, phone } : null,
+          userPhones: state.user ? { ...state.userPhones, [state.user.email]: phone } : state.userPhones
+        });
+
+        // Sync phone to customers table so Admin can see it
+        if (state.user) {
+          supabase.from('customers')
+            .update({ phone })
+            .eq('email', state.user.email)
+            .then(({ error }) => {
+              if (error) console.error('Error updating customer phone:', error);
+            });
+        }
+      },
       logoutUser: () => set({ user: null, cart: [], orders: [], adminOrders: [] }),
       
       submitVerification: (idCardUrl) => set((state) => {
