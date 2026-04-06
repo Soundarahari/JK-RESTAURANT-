@@ -35,7 +35,7 @@ export const ADMIN_EMAILS = ['soundarahari050@gmail.com'];
 
 export function isAdmin(user: UserProfile | null): boolean {
   if (!user) return false;
-  return ADMIN_EMAILS.includes(user.email) || user.email.startsWith('admin@');
+  return ADMIN_EMAILS.includes(user.email);
 }
 
 export interface UserProfile {
@@ -91,8 +91,8 @@ interface AppState {
   logoutUser: () => void;
   categories: Category[];
   fetchCategories: () => Promise<void>;
-  addCategory: (category: Omit<Category, 'id' | 'created_at'>) => Promise<void>;
-  updateCategory: (id: string, updates: Partial<Category>) => Promise<void>;
+  addCategory: (category: Omit<Category, 'id' | 'created_at'>) => Promise<{ success: boolean; error?: any }>;
+  updateCategory: (id: string, updates: Partial<Category>) => Promise<{ success: boolean; error?: any }>;
   deleteCategory: (id: string) => Promise<void>;
   setAppliedPromoCode: (promo: Promo | null) => void;
   addPromo: (promo: Omit<Promo, 'id'>) => void;
@@ -112,6 +112,7 @@ interface AppState {
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
   getTotalPrice: () => number;
   userPhones: Record<string, string>;
+  lastOrderTime: number;
 }
 
 export const useStore = create<AppState>()(
@@ -128,24 +129,33 @@ export const useStore = create<AppState>()(
       setOrderMode: (mode) => set({ orderMode: mode }),
       setUser: (user) => set({ user }),
       userPhones: {},
+      lastOrderTime: 0,
       categories: [],
       fetchCategories: async () => {
         const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
         if (!error && data) {
           set({ categories: data });
+        } else {
+          console.error('Error fetching categories:', error);
         }
       },
       addCategory: async (category) => {
         const { data, error } = await supabase.from('categories').insert([category]).select();
         if (!error && data) {
           set((state) => ({ categories: [...state.categories, data[0]] }));
+          return { success: true };
         }
+        console.error('Error adding category:', error);
+        return { success: false, error };
       },
       updateCategory: async (id, updates) => {
         const { data, error } = await supabase.from('categories').update(updates).eq('id', id).select();
         if (!error && data) {
           set((state) => ({ categories: state.categories.map(c => c.id === id ? data[0] : c) }));
+          return { success: true };
         }
+        console.error('Error updating category:', error);
+        return { success: false, error };
       },
       deleteCategory: async (id) => {
         const { error } = await supabase.from('categories').delete().eq('id', id);
@@ -299,8 +309,14 @@ export const useStore = create<AppState>()(
         }
       },
       placeOrder: async (paymentScreenshot, utrNumber, delivery_location) => {
-        const { user, cart, orderMode, getTotalPrice } = get();
+        const { user, cart, orderMode, getTotalPrice, lastOrderTime } = get();
         if (!user || cart.length === 0) return { success: false, error: 'No user or empty cart' };
+
+        // Rate limiting: prevent orders within 30 seconds of each other
+        const now = Date.now();
+        if (now - lastOrderTime < 30000) {
+          return { success: false, error: 'Please wait 30 seconds before placing another order.' };
+        }
 
         const newOrder = {
           user_id: user.id || `u_${Date.now()}`,
@@ -319,17 +335,23 @@ export const useStore = create<AppState>()(
         const { data, error } = await supabase.from('orders').insert([newOrder]).select();
         
         if (!error && data) {
-          // Trigger Admin Notification (via Twilio Edge Function)
-          try {
-            await fetch("https://hquuimozjttqfyloskhf.supabase.co/functions/v1/send-otp", {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                phone: "+917603814898", // Admin number for notification
-                otp: `🚨 NEW ORDER FROM ${user.full_name.toUpperCase()}! Total: ₹${newOrder.total_amount}. Check Admin Panel.` 
-              })
-            });
-          } catch (e) { console.error("Notification failed:", e); }
+          set({ lastOrderTime: now });
+
+          // Trigger Admin Notification (via Edge Function)
+          const notifyPhone = import.meta.env.VITE_ADMIN_PHONE;
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          if (notifyPhone && supabaseUrl) {
+            try {
+              await fetch(`${supabaseUrl}/functions/v1/send-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  phone: notifyPhone,
+                  otp: `🚨 NEW ORDER FROM ${user.full_name.toUpperCase()}! Total: ₹${newOrder.total_amount}. Check Admin Panel.` 
+                })
+              });
+            } catch (e) { console.error("Notification failed:", e); }
+          }
 
           set((state) => ({ 
             orders: [data[0] as Order, ...state.orders],
@@ -382,9 +404,7 @@ export const useStore = create<AppState>()(
       partialize: (state) => ({
         user: state.user,
         cart: state.cart,
-        promos: state.promos,
         orderMode: state.orderMode,
-        userPhones: state.userPhones,
       }),
     }
   )

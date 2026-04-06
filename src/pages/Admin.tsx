@@ -136,16 +136,36 @@ export const Admin = () => {
   // Sync product-derived categories to DB
   const syncDerivedCategories = async () => {
     setIsSyncingCategories(true);
+    let successCount = 0;
+    let errorMsg = '';
+
     try {
+      // Use useStore.getState() to get the live updated list of categories
+      // and prevent multiple inserts if the store is updated concurrently.
       for (const sc of derivedCategories) {
-        const exists = categories.some(c => c.name.toLowerCase() === sc.name.toLowerCase());
+        const currentCategories = useStore.getState().categories;
+        const exists = currentCategories.some(c => c.name.toLowerCase() === sc.name.toLowerCase());
+        
         if (!exists) {
-          await addCategory({ name: sc.name, image_url: sc.image });
+          const result = await addCategory({ name: sc.name, image_url: sc.image });
+          if (result.success) {
+            successCount++;
+          } else {
+            errorMsg = result.error?.message || 'Database error occurred';
+          }
         }
       }
+      
       await fetchCategories();
-    } catch (e) {
+      
+      if (errorMsg) {
+        alert(`Sync partially completed (${successCount} added). Error: ${errorMsg}`);
+      } else if (successCount > 0) {
+        alert(`Successfully synced ${successCount} new categories!`);
+      }
+    } catch (e: any) {
       console.error('Sync error:', e);
+      alert('A critical error occurred while syncing: ' + e.message);
     }
     setIsSyncingCategories(false);
   };
@@ -881,8 +901,13 @@ export const Admin = () => {
                     setIsSavingCategory(true);
                     try {
                       // 1. Update the category itself
-                      await updateCategory(editingCategory.id, { name: editingCategory.name, image_url: editingCategory.image_url });
+                      const result = await updateCategory(editingCategory.id, { name: editingCategory.name, image_url: editingCategory.image_url });
                       
+                      if (!result.success) {
+                        alert('Could not update category: ' + (result.error?.message || 'Unknown error'));
+                        setIsSavingCategory(false);
+                        return;
+                      }
                       // 2. Propagate name change to all products if changed
                       if (editingCategory.name !== originalCategoryName) {
                         const productsToUpdate = products.filter(p => (p.sub_category || p.name) === originalCategoryName);
@@ -924,11 +949,11 @@ export const Admin = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Dish Name</label>
-                <input type="text" className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:border-brand-500" placeholder="E.g. Garlic Naan" onChange={e => setNewDish({...newDish, name: e.target.value})} />
+                <input type="text" maxLength={100} className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:border-brand-500" placeholder="E.g. Garlic Naan" onChange={e => setNewDish({...newDish, name: e.target.value})} />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Description</label>
-                <textarea className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:border-brand-500 h-20" placeholder="Delicious soft naan..." onChange={e => setNewDish({...newDish, description: e.target.value})}></textarea>
+                <textarea maxLength={500} className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:border-brand-500 h-20" placeholder="Delicious soft naan..." onChange={e => setNewDish({...newDish, description: e.target.value})}></textarea>
               </div>
 
               {/* Category & Sub-Category */}
@@ -972,8 +997,9 @@ export const Admin = () => {
                       <input 
                         type="text" 
                         autoFocus
+                        maxLength={50}
                         value={customCategory}
-                        onChange={e => setCustomCategory(e.target.value)}
+                        onChange={e => setCustomCategory(e.target.value.replace(/[^a-zA-Z0-9\s]/g, '').slice(0, 50))} // added basic sanitization
                         placeholder="Group name (e.g. Pasta)"
                         className="w-full border border-brand-300 dark:border-brand-900/50 rounded-lg p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:border-brand-500"
                       />

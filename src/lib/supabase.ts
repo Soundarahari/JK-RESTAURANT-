@@ -4,10 +4,13 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Missing Supabase Environment Variables. Proceeding in mock mode.');
+  console.error(
+    '🔴 CRITICAL: Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY environment variables. ' +
+    'Create a .env file with these values. The app will not function correctly.'
+  );
 }
 
 export const supabase = createClient(
-  supabaseUrl || 'https://bhuyjcbsqatrruixpwao.supabase.co',
-  supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodXlqY2JzcWF0cnJ1aXhwd2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDY4NzIsImV4cCI6MjA5MDc4Mjg3Mn0.N0LKOM89FhOukpgFnn90q3gn1c_Xilsr3kNLtOthXow'
+  supabaseUrl || '',
+  supabaseAnonKey || ''
 );

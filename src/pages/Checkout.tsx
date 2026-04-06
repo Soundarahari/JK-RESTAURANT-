@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
 import { Navigation, Upload, CheckCircle2, Edit3, ShoppingBag, Package, Copy, ArrowLeft } from 'lucide-react';
 import { calculateDistance, RESTAURANT_COORDS, MAX_DELIVERY_RADIUS_KM } from '../utils/geo';
+import { supabase } from '../lib/supabase';
 
 export const Checkout = () => {
   const { cart, user, orderMode, setOrderMode, getTotalPrice, promos, appliedPromoCode, setAppliedPromoCode } = useStore();
@@ -12,11 +13,40 @@ export const Checkout = () => {
   const [geoError, setGeoError] = useState('');
   const [isLocating, setIsLocating] = useState(false);
   const [paymentScreenshot, setPaymentScreenshot] = useState<string | null>(null);
+  const [isUploadingScreenshot, setIsUploadingScreenshot] = useState(false);
   const [utrNumber, setUtrNumber] = useState('');
   const [orderComplete, setOrderComplete] = useState(false);
   const [cookingInstructions, setCookingInstructions] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [promoInput, setPromoInput] = useState('');
+
+  const UPI_ID = import.meta.env.VITE_UPI_ID || 'soundarahari@fam';
+
+  // Real file upload handler
+  const handleScreenshotUpload = async (file: File) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File too large. Max 5MB.');
+      return;
+    }
+    setIsUploadingScreenshot(true);
+    const fileExt = file.name.split('.').pop();
+    const filePath = `payment-proofs/${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(filePath, file, { cacheControl: '3600', upsert: false });
+    
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      // Fallback: use object URL locally if storage upload fails
+      setPaymentScreenshot(URL.createObjectURL(file));
+    } else {
+      const { data: urlData } = supabase.storage.from('images').getPublicUrl(filePath);
+      setPaymentScreenshot(urlData.publicUrl);
+    }
+    setIsUploadingScreenshot(false);
+  };
 
   const handleApplyPromo = () => {
     const promo = promos.find(p => p.code.toUpperCase() === promoInput.toUpperCase() && p.is_active);
@@ -198,7 +228,8 @@ export const Checkout = () => {
           type="text"
           placeholder="E.g. No onion, make it extra spicy..."
           value={cookingInstructions}
-          onChange={(e) => setCookingInstructions(e.target.value)}
+          onChange={(e) => setCookingInstructions(e.target.value.slice(0, 200))}
+          maxLength={200}
           className="w-full text-sm bg-gray-50 dark:bg-gray-800 border-none rounded-lg p-3 outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-gray-200"
         />
       </div>
@@ -292,17 +323,17 @@ export const Checkout = () => {
         <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-6 font-bold uppercase tracking-widest">Pay securely using any UPI app</p>
 
         <a
-          href={`upi://pay?pa=soundarahari@fam&pn=JKRestaurant&am=${grandTotal}&cu=INR`}
+          href={`upi://pay?pa=${UPI_ID}&pn=JKRestaurant&am=${grandTotal}&cu=INR`}
           className="w-full bg-[#6528df] text-white font-black py-4 rounded-2xl flex items-center justify-center mb-4 cursor-pointer hover:bg-opacity-90 shadow-xl shadow-[#6528df]/20 transition-all active:scale-95 text-sm"
         >
           Pay ₹{grandTotal} with UPI App
         </a>
 
         <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-3 mb-6">
-          <p className="text-sm font-bold text-gray-700 dark:text-gray-300">soundarahari@fam</p>
+          <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{UPI_ID}</p>
           <button 
             onClick={() => {
-              navigator.clipboard.writeText('soundarahari@fam');
+              navigator.clipboard.writeText(UPI_ID);
               alert('UPI ID copied!');
             }}
             className="flex items-center gap-1.5 bg-white dark:bg-gray-700 px-3 py-1.5 rounded-lg shadow-sm text-xs font-bold text-gray-600 dark:text-gray-300"
@@ -318,7 +349,8 @@ export const Checkout = () => {
               type="text"
               placeholder="Enter 12-digit UTR Number"
               value={utrNumber}
-              onChange={(e) => setUtrNumber(e.target.value.replace(/[^0-9]/g, ''))}
+              onChange={(e) => setUtrNumber(e.target.value.replace(/[^0-9]/g, '').slice(0, 16))}
+              maxLength={16}
               className="w-full text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 outline-none focus:ring-1 focus:ring-brand-500 font-bold"
             />
           </div>
@@ -326,13 +358,25 @@ export const Checkout = () => {
           <div>
             <p className="text-[10px] font-black mb-2 text-gray-400 uppercase tracking-widest">2. Payment Screenshot</p>
             {!paymentScreenshot ? (
-              <button
-                onClick={() => setPaymentScreenshot('https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=500')}
-                className="w-full border-2 border-dashed border-gray-100 dark:border-gray-800 bg-gray-50/10 py-6 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-brand-500 transition-colors"
+              <label
+                className="w-full border-2 border-dashed border-gray-100 dark:border-gray-800 bg-gray-50/10 py-6 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-brand-500 transition-colors cursor-pointer"
               >
                 <Upload size={24} className="text-gray-300" />
-                <span className="text-[10px] font-bold text-gray-400 uppercase">Tap to Upload Receipt</span>
-              </button>
+                <span className="text-[10px] font-bold text-gray-400 uppercase">
+                  {isUploadingScreenshot ? 'Uploading...' : 'Tap to Upload Receipt'}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={isUploadingScreenshot}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      handleScreenshotUpload(e.target.files[0]);
+                    }
+                  }}
+                />
+              </label>
             ) : (
               <div className="relative rounded-2xl overflow-hidden border border-emerald-100 dark:border-emerald-900/30">
                 <img src={paymentScreenshot} alt="Payment Proof" className="w-full h-32 object-cover opacity-50" />
