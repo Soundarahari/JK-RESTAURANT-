@@ -84,11 +84,6 @@ export const Admin = () => {
   
   // Admin search & category filter
 
-  // Derive categories from products
-  const menuCategories = useMemo(() => {
-    return ['All', ...Array.from(new Set(products.map(p => p.category)))];
-  }, [products]);
-
   // Derive sub-categories from products (same as Home page logic)
   const derivedSubCategories = useMemo(() => {
     const map = new Map<string, { name: string; image: string; count: number }>();
@@ -99,6 +94,14 @@ export const Admin = () => {
     });
     return Array.from(map.values()).sort((a, b) => b.count - a.count);
   }, [products]);
+
+  // Derive categories for filtering and grouping (matching Home page logic)
+  const menuCategories = useMemo(() => {
+    const names = categories.length > 0 
+      ? categories.map(c => c.name) 
+      : derivedSubCategories.map(sc => sc.name);
+    return ['All', ...names];
+  }, [categories, derivedSubCategories]);
 
   // Upload category image to Supabase Storage
   const uploadCategoryImage = async (file: File): Promise<string | null> => {
@@ -148,36 +151,41 @@ export const Admin = () => {
   // Filter products for admin menu
   const filteredMenuProducts = useMemo(() => {
     return products.filter(p => {
-      const matchCat = menuCategoryFilter === 'All' || p.category === menuCategoryFilter;
+      const pCat = p.sub_category || p.name;
+      const matchCat = menuCategoryFilter === 'All' || pCat === menuCategoryFilter;
       const matchSearch = p.name.toLowerCase().includes(menuSearch.toLowerCase()) ||
         (p.sub_category || '').toLowerCase().includes(menuSearch.toLowerCase());
       return matchCat && matchSearch;
     });
   }, [products, menuCategoryFilter, menuSearch]);
 
-  // Group filtered products by category
+  // Group filtered products by specific category (sub_category)
   const groupedMenuProducts = useMemo(() => {
-    const groupOrder = ['Meals', 'Chinese', 'Snacks', 'Fast Food', 'Coolers'];
     const groups = new Map<string, Product[]>();
 
     filteredMenuProducts.forEach(p => {
-      if (!groups.has(p.category)) groups.set(p.category, []);
-      groups.get(p.category)!.push(p);
+      const cat = p.sub_category || p.name;
+      if (!groups.has(cat)) groups.set(cat, []);
+      groups.get(cat)!.push(p);
     });
 
     const sorted: { category: string; items: Product[] }[] = [];
-    groupOrder.forEach(cat => {
+    
+    // Sort groups to match the order in menuCategories (which follows DB order or count order)
+    menuCategories.filter(c => c !== 'All').forEach(cat => {
       if (groups.has(cat)) {
         sorted.push({ category: cat, items: groups.get(cat)! });
         groups.delete(cat);
       }
     });
+
+    // Add any remaining groups (in case a product has a category not in the derived list)
     groups.forEach((items, cat) => {
       sorted.push({ category: cat, items });
     });
 
     return sorted;
-  }, [filteredMenuProducts]);
+  }, [filteredMenuProducts, menuCategories]);
 
   // Initial Accordion State: Close all except the last one
   useEffect(() => {
