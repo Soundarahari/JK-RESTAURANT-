@@ -1,0 +1,1 @@
+﻿src/pages/Admin.tsx(8,210): error TS6133: 'updateCategory' is declared but its value is never read.

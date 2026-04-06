@@ -5,7 +5,7 @@ import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, Che
 import { useNavigate } from 'react-router-dom';
 
 export const Admin = () => {
-  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, deleteCategory, fetchCategories } = useStore();
+  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, deleteCategory, fetchCategories } = useStore();
   const navigate = useNavigate();
   
   // 1. Admin Authorization check first
