@@ -43,6 +43,8 @@ export const Admin = () => {
   const [selectedUser, setSelectedUserDetails] = useState<{name: string, email: string, phone: string, is_student: boolean} | null>(null);
   const [enlargedScreenshot, setEnlargedScreenshot] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [originalCategoryName, setOriginalCategoryName] = useState<string>('');
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -80,12 +82,16 @@ export const Admin = () => {
   
   // Admin search & category filter
 
-  // Derive sub-categories from products (same as Home page logic)
-  const derivedSubCategories = useMemo(() => {
+  // Derive main categories from products (aligned with Home page)
+  const derivedCategories = useMemo(() => {
     const map = new Map<string, { name: string; image: string; count: number }>();
     products.forEach(p => {
-      const key = p.sub_category || p.name;
-      if (!map.has(key)) map.set(key, { name: key, image: p.image_url, count: 0 });
+      const key = p.category;
+      if (!map.has(key)) {
+        // Find the image from any product in this category as fallback
+        const catImg = products.find(prod => prod.category === key)?.image_url || '';
+        map.set(key, { name: key, image: catImg, count: 0 });
+      }
       map.get(key)!.count++;
     });
     return Array.from(map.values()).sort((a, b) => b.count - a.count);
@@ -95,9 +101,9 @@ export const Admin = () => {
   const menuCategories = useMemo(() => {
     const names = categories.length > 0 
       ? categories.map(c => c.name) 
-      : derivedSubCategories.map(sc => sc.name);
+      : derivedCategories.map(sc => sc.name);
     return ['All', ...names];
-  }, [categories, derivedSubCategories]);
+  }, [categories, derivedCategories]);
 
   // Upload category image to Supabase Storage
   const uploadCategoryImage = async (file: File): Promise<string | null> => {
@@ -131,7 +137,7 @@ export const Admin = () => {
   const syncDerivedCategories = async () => {
     setIsSyncingCategories(true);
     try {
-      for (const sc of derivedSubCategories) {
+      for (const sc of derivedCategories) {
         const exists = categories.some(c => c.name.toLowerCase() === sc.name.toLowerCase());
         if (!exists) {
           await addCategory({ name: sc.name, image_url: sc.image });
@@ -147,8 +153,7 @@ export const Admin = () => {
   // Filter products for admin menu
   const filteredMenuProducts = useMemo(() => {
     return products.filter(p => {
-      const pCat = p.sub_category || p.name;
-      const matchCat = menuCategoryFilter === 'All' || pCat === menuCategoryFilter;
+      const matchCat = menuCategoryFilter === 'All' || p.category === menuCategoryFilter;
       const matchSearch = p.name.toLowerCase().includes(menuSearch.toLowerCase()) ||
         (p.sub_category || '').toLowerCase().includes(menuSearch.toLowerCase());
       return matchCat && matchSearch;
@@ -160,7 +165,7 @@ export const Admin = () => {
     const groups = new Map<string, Product[]>();
 
     filteredMenuProducts.forEach(p => {
-      const cat = p.sub_category || p.name;
+      const cat = p.category;
       if (!groups.has(cat)) groups.set(cat, []);
       groups.get(cat)!.push(p);
     });
@@ -478,7 +483,7 @@ export const Admin = () => {
         <div className="space-y-4">
           
           {/* Sync Banner Integration (Moved from Categories Tab) */}
-          {categories.length === 0 && derivedSubCategories.length > 0 && (
+          {categories.length === 0 && derivedCategories.length > 0 && (
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 shadow-sm animate-in fade-in slide-in-from-top duration-500 mb-6">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-inner">
@@ -487,15 +492,15 @@ export const Admin = () => {
                 <div className="flex-1">
                   <h4 className="font-black text-[13px] text-amber-800 dark:text-amber-300 uppercase tracking-wider">Sync Menu Categories</h4>
                   <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5 leading-tight font-medium">
-                    We found <strong>{derivedSubCategories.length}</strong> categories in your menu. Save them to the DB to enable images and editing.
+                    We found <strong>{derivedCategories.length}</strong> categories in your menu. Save them to the DB to enable images and editing.
                   </p>
                   <button
                     onClick={syncDerivedCategories}
                     disabled={isSyncingCategories}
-                    className="mt-3 bg-amber-500 hover:bg-amber-600 text-white font-black py-2 px-4 rounded-lg text-[10px] uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                    className="mt-3 bg-amber-500 hover:bg-amber-600 text-white font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm"
                   >
                     <RefreshCw size={12} className={isSyncingCategories ? 'animate-spin' : ''} />
-                    {isSyncingCategories ? 'Syncing...' : `Sync ${derivedSubCategories.length} Items`}
+                    {isSyncingCategories ? 'Syncing...' : `Sync ${derivedCategories.length} Items`}
                   </button>
                 </div>
               </div>
@@ -543,7 +548,7 @@ export const Admin = () => {
           {groupedMenuProducts.map(({ category, items }) => {
             // Find DB Category metadata
             const categoryData = categories.find(c => c.name.toLowerCase() === category.toLowerCase());
-            const categoryImage = categoryData?.image_url || (derivedSubCategories.find(sc => sc.name.toLowerCase() === category.toLowerCase())?.image);
+            const categoryImage = categoryData?.image_url || (derivedCategories.find((sc: any) => sc.name.toLowerCase() === category.toLowerCase())?.image);
 
             return (
               <div key={category} className="group/cat">
@@ -577,15 +582,20 @@ export const Admin = () => {
                   {/* Category Action Buttons */}
                   <div className="flex gap-1">
                     <button 
-                      onClick={() => {
+                      onClick={async () => {
                         if (categoryData) {
+                          setOriginalCategoryName(categoryData.name);
                           setEditingCategory(categoryData);
                         } else {
-                          // Quick create if it doesn't exist
-                          addCategory({ name: category, image_url: categoryImage || '' }).then(() => {
-                            const updated = useStore.getState().categories.find((c: any) => c.name.toLowerCase() === category.toLowerCase());
-                            if (updated) setEditingCategory(updated);
-                          });
+                          // Force quick create so we have an ID to edit
+                          const { data, error } = await supabase.from('categories').insert([{ name: category, image_url: categoryImage || '' }]).select();
+                          if (!error && data) {
+                             await fetchCategories();
+                             setOriginalCategoryName(data[0].name);
+                             setEditingCategory(data[0]);
+                          } else {
+                            alert('Could not initialize category for editing. Please try the Sync button at the top.');
+                          }
                         }
                       }}
                       className="w-11 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl flex items-center justify-center text-gray-400 hover:text-brand-500 hover:border-brand-200 transition-all shadow-sm active:scale-95"
@@ -866,12 +876,36 @@ export const Admin = () => {
                 </button>
                 <button 
                   onClick={async () => {
-                    await updateCategory(editingCategory.id, { name: editingCategory.name, image_url: editingCategory.image_url });
-                    setEditingCategory(null);
+                    if (!editingCategory) return;
+                    setIsSavingCategory(true);
+                    try {
+                      // 1. Update the category itself
+                      await updateCategory(editingCategory.id, { name: editingCategory.name, image_url: editingCategory.image_url });
+                      
+                      // 2. Propagate name change to all products if changed
+                      if (editingCategory.name !== originalCategoryName) {
+                        const productsToUpdate = products.filter(p => p.category === originalCategoryName);
+                        for (const product of productsToUpdate) {
+                          await updateProduct(product.id, { category: editingCategory.name });
+                        }
+                        await fetchProducts();
+                      }
+                      
+                      setEditingCategory(null);
+                    } catch (e) {
+                      console.error('Error saving category:', e);
+                      alert('Error saving category changes.');
+                    }
+                    setIsSavingCategory(false);
                   }}
-                  className="flex-1 py-4 bg-brand-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-brand-500/20 transition-all active:scale-95"
+                  className="flex-1 py-4 bg-brand-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-brand-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  Save Changes
+                  {isSavingCategory ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : 'Save Changes'}
                 </button>
               </div>
             </div>
