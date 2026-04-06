@@ -76,8 +76,10 @@ export default async function handler(req: any, res: any) {
     console.log(`Email successfully sent to ${customerContact.email} for order ${orderId}`);
 
     try {
-        // We use localhost:3001 while testing on your own computer
-        await fetch('http://localhost:3001/send-whatsapp', {
+        // Use an environment variable for the deployed bot, fallback to localhost for local testing
+        const botUrl = process.env.WHATSAPP_API_URL || 'http://localhost:3001';
+        
+        await fetch(`${botUrl}/send-whatsapp`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
