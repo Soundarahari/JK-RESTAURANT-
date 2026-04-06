@@ -34,10 +34,10 @@ export const Admin = () => {
   const [menuCategoryFilter, setMenuCategoryFilter] = useState<string>('All');
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [hasInitializedAccordion, setHasInitializedAccordion] = useState(false);
-  const [newDishCategory, setNewDishCategory] = useState('Chinese');
+  const [newDishCategory, setNewDishCategory] = useState('Meals');
   const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
   const [customCategory, setCustomCategory] = useState('');
-  const [newDishSubCategory, setNewDishSubCategory] = useState('');
+  const [newDishSubCategory, setNewDishSubCategory] = useState('Fried Rice');
   
   const [userSearch, setUserSearch] = useState('');
   const [selectedUser, setSelectedUserDetails] = useState<{name: string, email: string, phone: string, is_student: boolean} | null>(null);
@@ -82,14 +82,14 @@ export const Admin = () => {
   
   // Admin search & category filter
 
-  // Derive main categories from products (aligned with Home page)
+  // Derive main categories from products (aligned with Home page "What's on your mind?")
   const derivedCategories = useMemo(() => {
     const map = new Map<string, { name: string; image: string; count: number }>();
     products.forEach(p => {
-      const key = p.category;
+      const key = p.sub_category || p.name;
       if (!map.has(key)) {
-        // Find the image from any product in this category as fallback
-        const catImg = products.find(prod => prod.category === key)?.image_url || '';
+        // Find the image from any product in this group as fallback
+        const catImg = products.find(prod => (prod.sub_category || prod.name) === key)?.image_url || '';
         map.set(key, { name: key, image: catImg, count: 0 });
       }
       map.get(key)!.count++;
@@ -153,7 +153,8 @@ export const Admin = () => {
   // Filter products for admin menu
   const filteredMenuProducts = useMemo(() => {
     return products.filter(p => {
-      const matchCat = menuCategoryFilter === 'All' || p.category === menuCategoryFilter;
+      const pSub = p.sub_category || p.name;
+      const matchCat = menuCategoryFilter === 'All' || pSub === menuCategoryFilter;
       const matchSearch = p.name.toLowerCase().includes(menuSearch.toLowerCase()) ||
         (p.sub_category || '').toLowerCase().includes(menuSearch.toLowerCase());
       return matchCat && matchSearch;
@@ -165,7 +166,7 @@ export const Admin = () => {
     const groups = new Map<string, Product[]>();
 
     filteredMenuProducts.forEach(p => {
-      const cat = p.category;
+      const cat = p.sub_category || p.name;
       if (!groups.has(cat)) groups.set(cat, []);
       groups.get(cat)!.push(p);
     });
@@ -884,9 +885,9 @@ export const Admin = () => {
                       
                       // 2. Propagate name change to all products if changed
                       if (editingCategory.name !== originalCategoryName) {
-                        const productsToUpdate = products.filter(p => p.category === originalCategoryName);
+                        const productsToUpdate = products.filter(p => (p.sub_category || p.name) === originalCategoryName);
                         for (const product of productsToUpdate) {
-                          await updateProduct(product.id, { category: editingCategory.name });
+                          await updateProduct(product.id, { sub_category: editingCategory.name });
                         }
                         await fetchProducts();
                       }
@@ -933,15 +934,30 @@ export const Admin = () => {
               {/* Category & Sub-Category */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Main Category</label>
+                  <select 
+                    value={newDishCategory} 
+                    onChange={e => setNewDishCategory(e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:border-brand-500"
+                  >
+                    <option value="Meals">Meals</option>
+                    <option value="Chinese">Chinese</option>
+                    <option value="Snacks">Snacks</option>
+                    <option value="Fast Food">Fast Food</option>
+                    <option value="Coolers">Coolers</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Menu Group (Sub-Category)</label>
                   {!isAddingNewCategory ? (
                     <select 
-                      value={newDishCategory} 
+                      value={newDishSubCategory} 
                       onChange={e => {
                         if (e.target.value === 'NEW') {
                           setIsAddingNewCategory(true);
+                          setNewDishSubCategory('');
                         } else {
-                          setNewDishCategory(e.target.value);
+                          setNewDishSubCategory(e.target.value);
                         }
                       }}
                       className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:border-brand-500"
@@ -949,7 +965,7 @@ export const Admin = () => {
                       {menuCategories.filter(c => c !== 'All').map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
                       ))}
-                      <option value="NEW" className="text-brand-500 font-bold">➕ Add New Category</option>
+                      <option value="NEW" className="text-brand-500 font-bold">➕ Add New Group</option>
                     </select>
                   ) : (
                     <div className="relative">
@@ -958,7 +974,7 @@ export const Admin = () => {
                         autoFocus
                         value={customCategory}
                         onChange={e => setCustomCategory(e.target.value)}
-                        placeholder="Enter category name"
+                        placeholder="Group name (e.g. Pasta)"
                         className="w-full border border-brand-300 dark:border-brand-900/50 rounded-lg p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:border-brand-500"
                       />
                       <button 
@@ -969,10 +985,6 @@ export const Admin = () => {
                       </button>
                     </div>
                   )}
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Sub Category</label>
-                  <input type="text" className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:border-brand-500" placeholder="E.g. Fried Rice" value={newDishSubCategory} onChange={e => setNewDishSubCategory(e.target.value)} />
                 </div>
               </div>
 
@@ -1009,13 +1021,13 @@ export const Admin = () => {
               <button 
                 onClick={() => {
                   if(newDish.name && newDish.base_price) {
-                    const finalCategory = isAddingNewCategory ? customCategory : newDishCategory;
-                    if (!finalCategory) return alert('Please enter or select a category');
+                    const finalSubCategory = isAddingNewCategory ? customCategory : newDishSubCategory;
+                    if (!finalSubCategory) return alert('Please enter or select a menu group (Sub-Category)');
 
                     addProduct({
                       ...newDish,
-                      category: finalCategory,
-                      sub_category: newDishSubCategory || newDish.name || '',
+                      category: newDishCategory || 'Meals', // Keep a fallback category
+                      sub_category: finalSubCategory,
                     } as Omit<Product, 'id'>);
                     setShowAddModal(false);
                     setNewDish({ is_available: true, bestseller: false, spicy: false, is_veg: true, rating: 0, reviews: 0, prep_time: 15 });
