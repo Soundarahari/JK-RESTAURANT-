@@ -88,7 +88,7 @@ export const Cart = () => {
       </div>
 
       {/* Action Bar */}
-      <div className="fixed bottom-[72px] left-0 right-0 p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 z-40">
+      <div className="fixed bottom-[72px] lg:bottom-0 left-0 lg:left-60 right-0 p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 z-40">
         <button
           onClick={() => {
             if (!user || user.phone === '') {

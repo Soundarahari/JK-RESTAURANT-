@@ -254,7 +254,7 @@ export const Checkout = () => {
       </div>
 
       {/* Floating Action Bar */}
-      <div className="fixed bottom-[72px] left-0 right-0 p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 z-40">
+      <div className="fixed bottom-[72px] lg:bottom-0 left-0 lg:left-60 right-0 p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 z-40">
         <div className="max-w-md mx-auto flex items-center justify-between gap-4">
           <div>
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total to Pay</p>
