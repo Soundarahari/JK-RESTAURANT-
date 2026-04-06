@@ -337,7 +337,34 @@ export const useStore = create<AppState>()(
         if (!error && data) {
           set({ lastOrderTime: now });
 
-          // Trigger Admin Notification (via Edge Function)
+          // 1. Send Email Notification to Customer via Vercel API
+          try {
+            const apiSecret = import.meta.env.VITE_ORDER_NOTIFICATION_SECRET || 'test-secret-key';
+            // In production, use relative path to hit Vercel Serverless Function. Locally, point to the dev server.
+            const apiUrl = import.meta.env.PROD ? '/api/order-notification' : 'http://localhost:3000/api/order-notification';
+            
+            fetch(apiUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiSecret}`
+              },
+              body: JSON.stringify({
+                orderId: data[0].id,
+                items: newOrder.items,
+                totalAmount: newOrder.total_amount,
+                customerContact: {
+                  name: newOrder.user_name,
+                  email: newOrder.user_email,
+                  phone: newOrder.user_phone
+                }
+              })
+            }).catch(err => console.warn('Silently failed to trigger email notification API:', err));
+          } catch (e) {
+            console.error('Email API call error:', e);
+          }
+
+          // 2. Trigger Admin Notification (via Edge Function)
           const notifyPhone = import.meta.env.VITE_ADMIN_PHONE;
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
           if (notifyPhone && supabaseUrl) {

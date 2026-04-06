@@ -1,13 +1,14 @@
 /**
- * Test script for the order-notification API endpoint.
+ * Test script for the order-notification API endpoint containing actual email logic.
  * 
  * Usage:
  * 1. Start your local Vercel dev server:
  *    npx vercel dev
  * 2. Run this script in another terminal:
  *    node test-order-api.js
- * 3. Or, to test against production, export the URL and SECRET:
- *    API_URL=https://your-vercel-domain.vercel.app/api/order-notification AUTH_SECRET=your_real_secret node test-order-api.js
+ * 
+ * NOTE: For the email to send successfully, ensure you have set GMAIL_USER 
+ * and GMAIL_APP_PASSWORD inside your .env file!
  */
 
 const API_URL = process.env.API_URL || 'http://localhost:3000/api/order-notification';
@@ -17,15 +18,16 @@ async function testEndpoint() {
   console.log(`Sending test notification to: ${API_URL}`);
 
   const payload = {
-    orderId: "ORD-12345-ABC",
+    orderId: `ORD-${Math.floor(Math.random() * 100000)}`,
     items: [
       { id: "item_1", name: "Margherita Pizza", quantity: 2, price: 12.50 },
       { id: "item_2", name: "Garlic Bread", quantity: 1, price: 4.00 }
     ],
     totalAmount: 29.00,
     customerContact: {
-      name: "John Doe",
-      email: "john.doe@example.com",
+      name: "Test Customer",
+      // CHANGE THIS TO YOUR ACTUAL EMAIL IF YOU WANT TO SEE THE EMAIL RECEIPT DELIVERED TO YOU!
+      email: "test.recipient@example.com", 
       phone: "+1234567890"
     }
   };
@@ -54,7 +56,7 @@ async function testEndpoint() {
     if (status === 200) {
       console.log("\n✅ Test passed! The endpoint processed the notification successfully.");
     } else {
-      console.error("\n❌ Test failed! Ensure the Vercel dev server is running and the secret matches.");
+      console.error("\n❌ Test failed! Ensure the Vercel dev server is running and .env keys are valid.");
     }
 
   } catch (error) {
