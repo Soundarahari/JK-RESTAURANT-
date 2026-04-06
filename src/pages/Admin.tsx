@@ -1,8 +1,9 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useStore, isAdmin as checkIsAdmin } from '../store';
 import { Product } from '../data/mock';
-import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, ChevronUp, ShieldAlert, Smartphone, Maximize2, ExternalLink } from 'lucide-react';
+import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, ChevronUp, ShieldAlert, Smartphone, Maximize2, ExternalLink, Upload, Link as LinkIcon, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 export const Admin = () => {
   const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, deleteCategory, fetchCategories } = useStore();
@@ -27,6 +28,12 @@ export const Admin = () => {
   const [newPromo, setNewPromo] = useState({ code: '', discount_type: 'percentage' as 'percentage' | 'flat', discount_value: 10, is_active: true });
   
   const [newCategoryData, setNewCategoryData] = useState({ name: '', image_url: '' });
+  const [categoryImageMode, setCategoryImageMode] = useState<'url' | 'upload'>('upload');
+  const [categoryImageFile, setCategoryImageFile] = useState<File | null>(null);
+  const [categoryImagePreview, setCategoryImagePreview] = useState<string>('');
+  const [isUploadingCategoryImage, setIsUploadingCategoryImage] = useState(false);
+  const [isSyncingCategories, setIsSyncingCategories] = useState(false);
+  const categoryFileInputRef = useRef<HTMLInputElement>(null);
   
   const [menuSearch, setMenuSearch] = useState('');
   const [menuCategoryFilter, setMenuCategoryFilter] = useState<string>('All');
@@ -81,6 +88,62 @@ export const Admin = () => {
   const menuCategories = useMemo(() => {
     return ['All', ...Array.from(new Set(products.map(p => p.category)))];
   }, [products]);
+
+  // Derive sub-categories from products (same as Home page logic)
+  const derivedSubCategories = useMemo(() => {
+    const map = new Map<string, { name: string; image: string; count: number }>();
+    products.forEach(p => {
+      const key = p.sub_category || p.name;
+      if (!map.has(key)) map.set(key, { name: key, image: p.image_url, count: 0 });
+      map.get(key)!.count++;
+    });
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }, [products]);
+
+  // Upload category image to Supabase Storage
+  const uploadCategoryImage = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `category_${Date.now()}.${fileExt}`;
+    const filePath = `categories/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('category-images')
+      .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+    if (uploadError) {
+      // If bucket doesn't exist, try 'images' bucket as fallback
+      const { error: fallbackError } = await supabase.storage
+        .from('images')
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
+      
+      if (fallbackError) {
+        console.error('Upload error:', fallbackError);
+        return null;
+      }
+      const { data: urlData } = supabase.storage.from('images').getPublicUrl(filePath);
+      return urlData.publicUrl;
+    }
+
+    const { data: urlData } = supabase.storage.from('category-images').getPublicUrl(filePath);
+    return urlData.publicUrl;
+  };
+
+  // Sync product-derived categories to DB
+  const syncDerivedCategories = async () => {
+    setIsSyncingCategories(true);
+    try {
+      for (const sc of derivedSubCategories) {
+        const exists = categories.some(c => c.name.toLowerCase() === sc.name.toLowerCase());
+        if (!exists) {
+          await addCategory({ name: sc.name, image_url: sc.image });
+        }
+      }
+      await fetchCategories();
+    } catch (e) {
+      console.error('Sync error:', e);
+    }
+    setIsSyncingCategories(false);
+  };
 
   // Filter products for admin menu
   const filteredMenuProducts = useMemo(() => {
@@ -629,65 +692,214 @@ export const Admin = () => {
 
       {activeTab === 'categories' && (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
-            <h3 className="font-black text-sm text-gray-800 dark:text-white mb-4 uppercase tracking-wider">Create New Category</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Category Name</label>
-                <input 
-                  type="text" 
-                  value={newCategoryData.name} 
-                  onChange={e => setNewCategoryData({...newCategoryData, name: e.target.value})}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm outline-none focus:ring-1"
-                  placeholder="e.g., Burgers"
-                />
+          {/* Sync Banner - show when DB categories are empty but products exist */}
+          {categories.length === 0 && derivedSubCategories.length > 0 && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <RefreshCw size={20} className="text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-black text-sm text-amber-800 dark:text-amber-300 uppercase tracking-wider">Categories Found from Menu</h4>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 leading-relaxed">
+                    We found <strong>{derivedSubCategories.length}</strong> categories from your existing menu items. Sync them to your categories list to manage them here.
+                  </p>
+                  <button
+                    onClick={syncDerivedCategories}
+                    disabled={isSyncingCategories}
+                    className="mt-3 bg-amber-500 hover:bg-amber-600 text-white font-black py-2.5 px-5 rounded-xl text-[11px] uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    <RefreshCw size={14} className={isSyncingCategories ? 'animate-spin' : ''} />
+                    {isSyncingCategories ? 'Syncing...' : `Sync ${derivedSubCategories.length} Categories`}
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Image URL</label>
-                <input 
-                  type="text" 
-                  value={newCategoryData.image_url} 
-                  onChange={e => setNewCategoryData({...newCategoryData, image_url: e.target.value})}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm outline-none focus:ring-1"
-                  placeholder="https://..."
-                />
+              {/* Preview of derived categories */}
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-amber-200 dark:border-amber-800">
+                {derivedSubCategories.slice(0, 8).map(sc => (
+                  <div key={sc.name} className="flex items-center gap-2 bg-white dark:bg-gray-900 rounded-full px-3 py-1.5 border border-amber-100 dark:border-gray-700">
+                    <img src={sc.image} alt={sc.name} className="w-6 h-6 rounded-full object-cover" 
+                      onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=100'; }}
+                    />
+                    <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300">{sc.name}</span>
+                  </div>
+                ))}
+                {derivedSubCategories.length > 8 && (
+                  <span className="text-[11px] font-bold text-amber-500 self-center">+{derivedSubCategories.length - 8} more</span>
+                )}
               </div>
             </div>
-            {newCategoryData.image_url && (
+          )}
+
+          {/* Create New Category */}
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
+            <h3 className="font-black text-sm text-gray-800 dark:text-white mb-4 uppercase tracking-wider">Create New Category</h3>
+            
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Category Name</label>
+              <input 
+                type="text" 
+                value={newCategoryData.name} 
+                onChange={e => setNewCategoryData({...newCategoryData, name: e.target.value})}
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm outline-none focus:ring-1 focus:ring-brand-500 dark:text-white"
+                placeholder="e.g., Burgers"
+              />
+            </div>
+
+            {/* Image Mode Toggle */}
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Category Image</label>
+              <div className="flex gap-2 mb-3">
+                <button
+                  onClick={() => setCategoryImageMode('upload')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                    categoryImageMode === 'upload'
+                      ? 'bg-brand-500 text-white shadow-md'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <Upload size={14} /> Upload Image
+                </button>
+                <button
+                  onClick={() => setCategoryImageMode('url')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                    categoryImageMode === 'url'
+                      ? 'bg-brand-500 text-white shadow-md'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <LinkIcon size={14} /> Paste URL
+                </button>
+              </div>
+
+              {categoryImageMode === 'upload' ? (
+                <div>
+                  <input
+                    ref={categoryFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        const file = e.target.files[0];
+                        setCategoryImageFile(file);
+                        setCategoryImagePreview(URL.createObjectURL(file));
+                        setNewCategoryData({...newCategoryData, image_url: ''});
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => categoryFileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 flex flex-col items-center justify-center gap-2 hover:border-brand-400 dark:hover:border-brand-600 transition-colors cursor-pointer group"
+                  >
+                    {categoryImagePreview ? (
+                      <div className="flex items-center gap-4">
+                        <img src={categoryImagePreview} alt="Preview" className="w-16 h-16 rounded-xl object-cover border-2 border-brand-500 shadow-md" />
+                        <div className="text-left">
+                          <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{categoryImageFile?.name}</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">Click to change image</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center group-hover:bg-brand-50 dark:group-hover:bg-brand-900/30 transition-colors">
+                          <ImageIcon size={24} className="text-gray-400 group-hover:text-brand-500 transition-colors" />
+                        </div>
+                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400">Click to upload an image</p>
+                        <p className="text-[10px] text-gray-400">JPG, PNG, WEBP up to 5MB</p>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <input 
+                    type="text" 
+                    value={newCategoryData.image_url} 
+                    onChange={e => {
+                      setNewCategoryData({...newCategoryData, image_url: e.target.value});
+                      setCategoryImageFile(null);
+                      setCategoryImagePreview('');
+                    }}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm outline-none focus:ring-1 focus:ring-brand-500 dark:text-white"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Preview for URL mode */}
+            {categoryImageMode === 'url' && newCategoryData.image_url && (
               <div className="mb-4 flex items-center gap-3">
                 <span className="text-xs font-bold text-gray-500">Preview:</span>
-                <img src={newCategoryData.image_url} alt="Preview" className="w-12 h-12 rounded-full object-cover border-2 border-brand-500" />
+                <img src={newCategoryData.image_url} alt="Preview" className="w-12 h-12 rounded-full object-cover border-2 border-brand-500" 
+                  onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=100'; }}
+                />
               </div>
             )}
+
             <button 
-              onClick={() => {
-                if (newCategoryData.name && newCategoryData.image_url) {
-                  addCategory({ ...newCategoryData });
+              disabled={isUploadingCategoryImage || !newCategoryData.name || (!newCategoryData.image_url && !categoryImageFile)}
+              onClick={async () => {
+                if (!newCategoryData.name) return;
+                
+                let imageUrl = newCategoryData.image_url;
+                
+                // If upload mode with a file, upload to Supabase Storage
+                if (categoryImageMode === 'upload' && categoryImageFile) {
+                  setIsUploadingCategoryImage(true);
+                  const uploadedUrl = await uploadCategoryImage(categoryImageFile);
+                  setIsUploadingCategoryImage(false);
+                  
+                  if (uploadedUrl) {
+                    imageUrl = uploadedUrl;
+                  } else {
+                    // Fallback: use a local blob URL (won't persist but won't break)
+                    imageUrl = categoryImagePreview || 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=500';
+                  }
+                }
+                
+                if (imageUrl) {
+                  await addCategory({ name: newCategoryData.name, image_url: imageUrl });
                   setNewCategoryData({ name: '', image_url: '' });
+                  setCategoryImageFile(null);
+                  setCategoryImagePreview('');
                 }
               }}
-              className="bg-brand-500 text-white font-black py-3 px-6 rounded-xl text-xs uppercase tracking-widest active:scale-95 transition-transform"
+              className="bg-brand-500 text-white font-black py-3 px-6 rounded-xl text-xs uppercase tracking-widest active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Add Category
+              {isUploadingCategoryImage ? (
+                <><RefreshCw size={14} className="animate-spin" /> Uploading...</>
+              ) : (
+                <><Plus size={14} /> Add Category</>
+              )}
             </button>
           </div>
 
+          {/* Active Categories List */}
           <div className="space-y-3 mt-6">
             <h3 className="font-black text-sm text-gray-800 dark:text-white uppercase tracking-wider mb-3">Active Categories ({categories.length})</h3>
             {categories.length === 0 ? (
-               <p className="text-gray-500 text-sm">No categories created yet.</p>
+              <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                <div className="text-4xl mb-2">📂</div>
+                <p className="text-gray-500 dark:text-gray-400 text-sm font-semibold">No categories in database yet</p>
+                <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Create new categories above or sync from your menu items</p>
+              </div>
             ) : (
               categories.map(cat => (
-                <div key={cat.id} className="flex items-center justify-between bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 rounded-xl shadow-sm">
+                <div key={cat.id} className="flex items-center justify-between bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 rounded-xl shadow-sm hover:border-brand-200 dark:hover:border-brand-900/50 transition-colors">
                   <div className="flex items-center gap-4">
-                    <img src={cat.image_url} alt={cat.name} className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700" />
+                    <img src={cat.image_url} alt={cat.name} className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700" 
+                      onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=100'; }}
+                    />
                     <div>
-                      <h4 className="font-black text-gray-800 dark:text-white text-lg tracking-wider">{cat.name}</h4>
+                      <h4 className="font-black text-gray-800 dark:text-white text-sm tracking-wider">{cat.name}</h4>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 truncate max-w-[200px]">{cat.image_url.startsWith('http') ? 'External URL' : 'Uploaded'}</p>
                     </div>
                   </div>
                   <button 
                     onClick={() => deleteCategory(cat.id)}
-                    className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors"
+                    className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                   >
                     <X size={14} />
                   </button>
