@@ -5,7 +5,7 @@ import { Plus, Minus, X } from 'lucide-react';
 
 export const VariantModal = ({ group, onClose }: { group: Product[], onClose: () => void }) => {
   const { user, cart, addToCart, removeFromCart, updateQuantity } = useStore();
-  const isStudentVerified = user?.is_student && user?.verification_status === 'verified';
+  const isStudentVerified = user?.is_student;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center bg-black/60 backdrop-blur-sm transition-opacity p-4 sm:p-0">

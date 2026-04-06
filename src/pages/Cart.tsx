@@ -6,7 +6,7 @@ export const Cart = () => {
   const { cart, user, getTotalPrice } = useStore();
   const navigate = useNavigate();
 
-  const isStudentVerified = user?.is_student && user?.verification_status === 'verified';
+  const isStudentVerified = user?.is_student;
   const itemTotal = getTotalPrice();
 
   if (cart.length === 0) {
