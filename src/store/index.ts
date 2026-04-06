@@ -115,13 +115,21 @@ export const useStore = create<AppState>()(
       setOrderMode: (mode) => set({ orderMode: mode }),
       setUser: (user) => set({ user }),
       userPhones: {},
-      loginWithEmail: (email, name, avatarUrl) => {
+      loginWithEmail: async (email, name, avatarUrl) => {
         const state = get();
-        // Look up phone from our record map
-        const existingPhone = state.userPhones[email] || '';
+        let existingPhone = state.userPhones[email] || '';
+        
+        // Try to fetch existing phone from database if local state is missing
+        if (!existingPhone) {
+          const { data } = await supabase.from('customers').select('phone').eq('email', email).single();
+          if (data?.phone) {
+            existingPhone = data.phone;
+          }
+        }
         
         const studentDetected = isStudentEmail(email);
         set({
+          userPhones: { ...get().userPhones, [email]: existingPhone },
           user: {
             id: (state.user && state.user.email === email) ? state.user.id : `u_${Date.now()}`,
             full_name: name,
@@ -132,15 +140,17 @@ export const useStore = create<AppState>()(
           }
         });
 
-        // Upsert into customers table for admin visibility
-        supabase.from('customers').upsert({
+        // Upsert into customers table for admin visibility (only upsert if phone exists or it will overwrite)
+        const customerData: any = {
           email,
           name,
-          phone: existingPhone,
           avatar_url: avatarUrl || null,
           is_student: studentDetected,
           last_login: new Date().toISOString(),
-        }, { onConflict: 'email' }).then(({ error }) => {
+        };
+        if (existingPhone) customerData.phone = existingPhone;
+
+        supabase.from('customers').upsert(customerData, { onConflict: 'email' }).then(({ error }) => {
           if (error) console.error('Error upserting customer:', error);
         });
       },
@@ -335,6 +345,7 @@ export const useStore = create<AppState>()(
         cart: state.cart,
         promos: state.promos,
         orderMode: state.orderMode,
+        userPhones: state.userPhones,
       }),
     }
   )
