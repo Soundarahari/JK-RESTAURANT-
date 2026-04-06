@@ -75,6 +75,24 @@ export default async function handler(req: any, res: any) {
     await transporter.sendMail(mailOptions);
     console.log(`Email successfully sent to ${customerContact.email} for order ${orderId}`);
 
+    try {
+        // We use localhost:3001 while testing on your own computer
+        await fetch('http://localhost:3001/send-whatsapp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                phoneNumber: customerContact.phone, // Ensure your frontend passes a 10-digit phone number
+                orderId: orderId,
+                totalAmount: totalAmount
+            })
+        });
+        console.log("Pinged WhatsApp Bot successfully");
+    } catch (error) {
+        console.error("Could not reach WhatsApp bot:", error);
+    }
+
     // Return success response
     return res.status(200).json({ 
       success: true, 
