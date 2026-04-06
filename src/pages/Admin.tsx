@@ -1,13 +1,13 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { useStore, isAdmin as checkIsAdmin } from '../store';
+import { useState, useMemo, useEffect } from 'react';
+import { useStore, isAdmin as checkIsAdmin, Category } from '../store';
 import { Product } from '../data/mock';
-import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, ChevronUp, ShieldAlert, Smartphone, Maximize2, ExternalLink, Upload, Link as LinkIcon, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, ChevronUp, ShieldAlert, Smartphone, Maximize2, ExternalLink, Upload, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 
 export const Admin = () => {
-  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, deleteCategory, fetchCategories } = useStore();
+  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories } = useStore();
   const navigate = useNavigate();
   
   // 1. Admin Authorization check first
@@ -28,13 +28,7 @@ export const Admin = () => {
   
   const [newPromo, setNewPromo] = useState({ code: '', discount_type: 'percentage' as 'percentage' | 'flat', discount_value: 10, is_active: true });
   
-  const [newCategoryData, setNewCategoryData] = useState({ name: '', image_url: '' });
-  const [categoryImageMode, setCategoryImageMode] = useState<'url' | 'upload'>('upload');
-  const [categoryImageFile, setCategoryImageFile] = useState<File | null>(null);
-  const [categoryImagePreview, setCategoryImagePreview] = useState<string>('');
-  const [isUploadingCategoryImage, setIsUploadingCategoryImage] = useState(false);
   const [isSyncingCategories, setIsSyncingCategories] = useState(false);
-  const categoryFileInputRef = useRef<HTMLInputElement>(null);
   
   const [menuSearch, setMenuSearch] = useState('');
   const [menuCategoryFilter, setMenuCategoryFilter] = useState<string>('All');
@@ -679,7 +673,8 @@ export const Admin = () => {
                 </div>
               )}
             </div>
-          ))}
+          );
+        })}
 
           {filteredMenuProducts.length === 0 && (
             <div className="text-center py-10 bg-gray-50 dark:bg-gray-800 rounded-xl">
@@ -999,6 +994,27 @@ export const Admin = () => {
               >
                 <Save size={18} /> Save to Menu
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Enlarged Screenshot Modal */}
+      {enlargedScreenshot && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300"
+          onClick={() => setEnlargedScreenshot(null)}
+        >
+          <button 
+            className="absolute top-6 right-6 w-12 h-12 bg-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-colors z-[101]"
+            onClick={(e) => { e.stopPropagation(); setEnlargedScreenshot(null); }}
+          >
+            <X size={24} />
+          </button>
+          <div className="relative max-w-full max-h-full" onClick={e => e.stopPropagation()}>
+            <img src={enlargedScreenshot} className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl animate-in zoom-in-95 duration-500 border border-white/10" alt="Payment Proof" />
+            <div className="absolute -bottom-12 left-0 right-0 text-center">
+              <p className="text-white/60 text-sm font-bold uppercase tracking-widest">Payment Proof Screenshot</p>
             </div>
           </div>
         </div>
