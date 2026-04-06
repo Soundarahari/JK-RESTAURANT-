@@ -5,15 +5,16 @@ import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, Che
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
+
 export const Admin = () => {
-  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, deleteCategory, fetchCategories } = useStore();
+  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, deleteCategory, fetchCategories } = useStore();
   const navigate = useNavigate();
   
   // 1. Admin Authorization check first
   const isAdmin = checkIsAdmin(user);
 
   // 2. Component State Hooks
-  const [activeTab, setActiveTab] = useState<'orders' | 'promos' | 'menu' | 'users' | 'categories'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'promos' | 'menu' | 'users'>('orders');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newDish, setNewDish] = useState<Partial<Product>>({ 
     is_available: true, 
@@ -47,6 +48,7 @@ export const Admin = () => {
   const [userSearch, setUserSearch] = useState('');
   const [selectedUser, setSelectedUserDetails] = useState<{name: string, email: string, phone: string, is_student: boolean} | null>(null);
   const [enlargedScreenshot, setEnlargedScreenshot] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -264,36 +266,30 @@ export const Admin = () => {
 
       <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Dashboard</h2>
       
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 overflow-x-auto hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
         <button 
           onClick={() => setActiveTab('orders')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${activeTab === 'orders' ? 'bg-brand-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
+          className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'orders' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
         >
           ORDERS
         </button>
         <button 
           onClick={() => setActiveTab('promos')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors relative ${activeTab === 'promos' ? 'bg-brand-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
+          className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'promos' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
         >
           PROMOS
         </button>
         <button 
           onClick={() => setActiveTab('menu')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${activeTab === 'menu' ? 'bg-brand-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
+          className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'menu' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
         >
           MENU
         </button>
         <button 
           onClick={() => setActiveTab('users')}
-          className={`flex-1 py-2 text-[10px] sm:text-xs font-bold rounded-lg transition-colors ${activeTab === 'users' ? 'bg-brand-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
+          className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'users' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
         >
           USERS
-        </button>
-        <button 
-          onClick={() => setActiveTab('categories')}
-          className={`flex-1 py-2 text-[10px] sm:text-xs font-bold rounded-lg transition-colors ${activeTab === 'categories' ? 'bg-brand-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
-        >
-          CATEGORIES
         </button>
       </div>
 
@@ -486,6 +482,32 @@ export const Admin = () => {
 
       {activeTab === 'menu' && (
         <div className="space-y-4">
+          
+          {/* Sync Banner Integration (Moved from Categories Tab) */}
+          {categories.length === 0 && derivedSubCategories.length > 0 && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 shadow-sm animate-in fade-in slide-in-from-top duration-500 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center flex-shrink-0 shadow-inner">
+                  <RefreshCw size={20} className="text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-black text-[13px] text-amber-800 dark:text-amber-300 uppercase tracking-wider">Sync Menu Categories</h4>
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5 leading-tight font-medium">
+                    We found <strong>{derivedSubCategories.length}</strong> categories in your menu. Save them to the DB to enable images and editing.
+                  </p>
+                  <button
+                    onClick={syncDerivedCategories}
+                    disabled={isSyncingCategories}
+                    className="mt-3 bg-amber-500 hover:bg-amber-600 text-white font-black py-2 px-4 rounded-lg text-[10px] uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                  >
+                    <RefreshCw size={12} className={isSyncingCategories ? 'animate-spin' : ''} />
+                    {isSyncingCategories ? 'Syncing...' : `Sync ${derivedSubCategories.length} Items`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Search Bar & Controls */}
           <div className="flex gap-2 items-center">
             <div className="relative flex-1">
@@ -524,21 +546,62 @@ export const Admin = () => {
           </div>
 
           {/* Category-wise collapsible sections */}
-          {groupedMenuProducts.map(({ category, items }) => (
-            <div key={category}>
-              {/* Category Header (collapsible) */}
-              <button
-                onClick={() => toggleCollapse(category)}
-                className="w-full flex items-center justify-between bg-gray-100 dark:bg-gray-800 px-4 py-2.5 rounded-xl mb-2 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
-              >
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-sm text-gray-800 dark:text-white">{category}</h3>
-                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{items.length} items</span>
+          {groupedMenuProducts.map(({ category, items }) => {
+            // Find DB Category metadata
+            const categoryData = categories.find(c => c.name.toLowerCase() === category.toLowerCase());
+            const categoryImage = categoryData?.image_url || (derivedSubCategories.find(sc => sc.name.toLowerCase() === category.toLowerCase())?.image);
+
+            return (
+              <div key={category} className="group/cat">
+                {/* Category Header (collapsible) */}
+                <div className="flex gap-2 items-stretch items-center mb-2">
+                  <button
+                    onClick={() => toggleCollapse(category)}
+                    className="flex-1 flex items-center justify-between bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 px-3 py-2.5 rounded-2xl transition-all hover:border-brand-200 dark:hover:border-brand-900/50 shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-gray-50 dark:border-gray-800 bg-gray-100 dark:bg-gray-700 shadow-inner flex-shrink-0">
+                        <img 
+                          src={categoryImage} 
+                          alt={category} 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=100'; }}
+                        />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="font-black text-sm text-gray-800 dark:text-white uppercase tracking-tight leading-none mb-0.5">{category}</h3>
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{items.length} items on menu</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-50 dark:bg-gray-800/50 text-gray-400">
+                        {collapsedCategories.has(category) ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                      </div>
+                    </div>
+                  </button>
+                  
+                  {/* Category Action Buttons */}
+                  <div className="flex gap-1">
+                    <button 
+                      onClick={() => {
+                        if (categoryData) {
+                          setEditingCategory(categoryData);
+                        } else {
+                          // Quick create if it doesn't exist
+                          addCategory({ name: category, image_url: categoryImage || '' }).then(() => {
+                            const updated = useStore.getState().categories.find((c: any) => c.name.toLowerCase() === category.toLowerCase());
+                            if (updated) setEditingCategory(updated);
+                          });
+                        }
+                      }}
+                      className="w-11 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl flex items-center justify-center text-gray-400 hover:text-brand-500 hover:border-brand-200 transition-all shadow-sm active:scale-95"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                  </div>
                 </div>
-                {collapsedCategories.has(category) ? <ChevronDown size={18} className="text-gray-500" /> : <ChevronUp size={18} className="text-gray-500" />}
-              </button>
-              
-              {/* Items (collapsible) */}
+                
+                {/* Items (collapsible) */}
               {!collapsedCategories.has(category) && (
                 <div className="space-y-3 mb-4">
                   {items.map(product => (
@@ -698,247 +761,6 @@ export const Admin = () => {
         </div>
       )}
 
-      {activeTab === 'categories' && (
-        <div className="space-y-6">
-          {/* Sync Banner - show when DB categories are empty but products exist */}
-          {categories.length === 0 && derivedSubCategories.length > 0 && (
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <RefreshCw size={20} className="text-amber-600 dark:text-amber-400" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-black text-sm text-amber-800 dark:text-amber-300 uppercase tracking-wider">Categories Found from Menu</h4>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 leading-relaxed">
-                    We found <strong>{derivedSubCategories.length}</strong> categories from your existing menu items. Sync them to your categories list to manage them here.
-                  </p>
-                  <button
-                    onClick={syncDerivedCategories}
-                    disabled={isSyncingCategories}
-                    className="mt-3 bg-amber-500 hover:bg-amber-600 text-white font-black py-2.5 px-5 rounded-xl text-[11px] uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
-                  >
-                    <RefreshCw size={14} className={isSyncingCategories ? 'animate-spin' : ''} />
-                    {isSyncingCategories ? 'Syncing...' : `Sync ${derivedSubCategories.length} Categories`}
-                  </button>
-                </div>
-              </div>
-              {/* Preview of derived categories */}
-              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-amber-200 dark:border-amber-800">
-                {derivedSubCategories.slice(0, 8).map(sc => (
-                  <div key={sc.name} className="flex items-center gap-2 bg-white dark:bg-gray-900 rounded-full px-3 py-1.5 border border-amber-100 dark:border-gray-700">
-                    <img src={sc.image} alt={sc.name} className="w-6 h-6 rounded-full object-cover" 
-                      onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=100'; }}
-                    />
-                    <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300">{sc.name}</span>
-                  </div>
-                ))}
-                {derivedSubCategories.length > 8 && (
-                  <span className="text-[11px] font-bold text-amber-500 self-center">+{derivedSubCategories.length - 8} more</span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Create New Category */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
-            <h3 className="font-black text-sm text-gray-800 dark:text-white mb-4 uppercase tracking-wider">Create New Category</h3>
-            
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Category Name</label>
-              <input 
-                type="text" 
-                value={newCategoryData.name} 
-                onChange={e => setNewCategoryData({...newCategoryData, name: e.target.value})}
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm outline-none focus:ring-1 focus:ring-brand-500 dark:text-white"
-                placeholder="e.g., Burgers"
-              />
-            </div>
-
-            {/* Image Mode Toggle */}
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Category Image</label>
-              <div className="flex gap-2 mb-3">
-                <button
-                  onClick={() => setCategoryImageMode('upload')}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                    categoryImageMode === 'upload'
-                      ? 'bg-brand-500 text-white shadow-md'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <Upload size={14} /> Upload Image
-                </button>
-                <button
-                  onClick={() => setCategoryImageMode('url')}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                    categoryImageMode === 'url'
-                      ? 'bg-brand-500 text-white shadow-md'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <LinkIcon size={14} /> Paste URL
-                </button>
-              </div>
-
-              {categoryImageMode === 'upload' ? (
-                <div>
-                  <input
-                    ref={categoryFileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        const file = e.target.files[0];
-                        setCategoryImageFile(file);
-                        setCategoryImagePreview(URL.createObjectURL(file));
-                        setNewCategoryData({...newCategoryData, image_url: ''});
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={() => categoryFileInputRef.current?.click()}
-                    className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 flex flex-col items-center justify-center gap-2 hover:border-brand-400 dark:hover:border-brand-600 transition-colors cursor-pointer group"
-                  >
-                    {categoryImagePreview ? (
-                      <div className="flex items-center gap-4">
-                        <img src={categoryImagePreview} alt="Preview" className="w-16 h-16 rounded-xl object-cover border-2 border-brand-500 shadow-md" />
-                        <div className="text-left">
-                          <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{categoryImageFile?.name}</p>
-                          <p className="text-[10px] text-gray-400 mt-0.5">Click to change image</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center group-hover:bg-brand-50 dark:group-hover:bg-brand-900/30 transition-colors">
-                          <ImageIcon size={24} className="text-gray-400 group-hover:text-brand-500 transition-colors" />
-                        </div>
-                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400">Click to upload an image</p>
-                        <p className="text-[10px] text-gray-400">JPG, PNG, WEBP up to 5MB</p>
-                      </>
-                    )}
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <input 
-                    type="text" 
-                    value={newCategoryData.image_url} 
-                    onChange={e => {
-                      setNewCategoryData({...newCategoryData, image_url: e.target.value});
-                      setCategoryImageFile(null);
-                      setCategoryImagePreview('');
-                    }}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm outline-none focus:ring-1 focus:ring-brand-500 dark:text-white"
-                    placeholder="https://example.com/image.jpg"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Preview for URL mode */}
-            {categoryImageMode === 'url' && newCategoryData.image_url && (
-              <div className="mb-4 flex items-center gap-3">
-                <span className="text-xs font-bold text-gray-500">Preview:</span>
-                <img src={newCategoryData.image_url} alt="Preview" className="w-12 h-12 rounded-full object-cover border-2 border-brand-500" 
-                  onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=100'; }}
-                />
-              </div>
-            )}
-
-            <button 
-              disabled={isUploadingCategoryImage || !newCategoryData.name || (!newCategoryData.image_url && !categoryImageFile)}
-              onClick={async () => {
-                if (!newCategoryData.name) return;
-                
-                let imageUrl = newCategoryData.image_url;
-                
-                // If upload mode with a file, upload to Supabase Storage
-                if (categoryImageMode === 'upload' && categoryImageFile) {
-                  setIsUploadingCategoryImage(true);
-                  const uploadedUrl = await uploadCategoryImage(categoryImageFile);
-                  setIsUploadingCategoryImage(false);
-                  
-                  if (uploadedUrl) {
-                    imageUrl = uploadedUrl;
-                  } else {
-                    // Fallback: use a local blob URL (won't persist but won't break)
-                    imageUrl = categoryImagePreview || 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=500';
-                  }
-                }
-                
-                if (imageUrl) {
-                  await addCategory({ name: newCategoryData.name, image_url: imageUrl });
-                  setNewCategoryData({ name: '', image_url: '' });
-                  setCategoryImageFile(null);
-                  setCategoryImagePreview('');
-                }
-              }}
-              className="bg-brand-500 text-white font-black py-3 px-6 rounded-xl text-xs uppercase tracking-widest active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isUploadingCategoryImage ? (
-                <><RefreshCw size={14} className="animate-spin" /> Uploading...</>
-              ) : (
-                <><Plus size={14} /> Add Category</>
-              )}
-            </button>
-          </div>
-
-          {/* Active Categories List */}
-          <div className="space-y-3 mt-6">
-            <h3 className="font-black text-sm text-gray-800 dark:text-white uppercase tracking-wider mb-3">Active Categories ({categories.length})</h3>
-            {categories.length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-                <div className="text-4xl mb-2">📂</div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm font-semibold">No categories in database yet</p>
-                <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Create new categories above or sync from your menu items</p>
-              </div>
-            ) : (
-              categories.map(cat => (
-                <div key={cat.id} className="flex items-center justify-between bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 rounded-xl shadow-sm hover:border-brand-200 dark:hover:border-brand-900/50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <img src={cat.image_url} alt={cat.name} className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700" 
-                      onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=100'; }}
-                    />
-                    <div>
-                      <h4 className="font-black text-gray-800 dark:text-white text-sm tracking-wider">{cat.name}</h4>
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 truncate max-w-[200px]">{cat.image_url.startsWith('http') ? 'External URL' : 'Uploaded'}</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => deleteCategory(cat.id)}
-                    className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Screenshot Enlarger Modal */}
-      {enlargedScreenshot && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/95 backdrop-blur-xl" onClick={() => setEnlargedScreenshot(null)}></div>
-          <div className="relative w-full max-w-sm animate-in zoom-in duration-300">
-            <button 
-              onClick={() => setEnlargedScreenshot(null)}
-              className="absolute -top-12 right-0 text-white bg-white/10 p-2 rounded-full hover:bg-white/20 transition-all"
-            >
-              <X size={24} />
-            </button>
-            <div className="bg-white dark:bg-gray-900 rounded-3xl overflow-hidden shadow-2xl">
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Payment Proof Verification</span>
-              </div>
-              <img src={enlargedScreenshot} alt="Payment Receipt" className="w-full h-auto object-contain max-h-[70vh]" />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* User Details Modal */}
       {selectedUser && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -985,7 +807,82 @@ export const Admin = () => {
         </div>
       )}
 
-      {/* Add New Dish Modal */}
+      {/* Edit Category Modal */}
+      {editingCategory && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in duration-300 border border-gray-100 dark:border-gray-800">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-black text-lg text-gray-900 dark:text-white uppercase tracking-tight">Edit Category</h3>
+              <button onClick={() => setEditingCategory(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={20}/></button>
+            </div>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="block text-xs font-black text-gray-400 dark:text-gray-500 mb-2 uppercase tracking-widest">Category Name</label>
+                <input 
+                  type="text" 
+                  value={editingCategory.name} 
+                  onChange={e => setEditingCategory({...editingCategory, name: e.target.value})}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-4 text-sm font-bold text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-gray-400 dark:text-gray-500 mb-2 uppercase tracking-widest">Category Image URL</label>
+                <div className="flex gap-2">
+                   <input 
+                    type="text" 
+                    value={editingCategory.image_url} 
+                    onChange={e => setEditingCategory({...editingCategory, image_url: e.target.value})}
+                    className="flex-1 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-4 text-sm font-bold text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                  />
+                  <div className="relative">
+                    <button className="h-full px-4 bg-gray-100 dark:bg-gray-800 rounded-2xl text-gray-500 flex items-center justify-center">
+                      <Upload size={18} />
+                    </button>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="absolute inset-0 opacity-0 cursor-pointer" 
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const url = await uploadCategoryImage(e.target.files[0]);
+                          if (url) setEditingCategory({...editingCategory!, image_url: url});
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {editingCategory.image_url && (
+                <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-800">
+                  <img src={editingCategory.image_url} className="w-14 h-14 rounded-xl object-cover shadow-sm bg-white" alt="" />
+                  <p className="text-[10px] font-bold text-gray-400 uppercase leading-snug">Preview of how it appears on Home page</p>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <button 
+                  onClick={() => setEditingCategory(null)}
+                  className="flex-1 py-4 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={async () => {
+                    await updateCategory(editingCategory.id, { name: editingCategory.name, image_url: editingCategory.image_url });
+                    setEditingCategory(null);
+                  }}
+                  className="flex-1 py-4 bg-brand-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-brand-500/20 transition-all active:scale-95"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md p-5 shadow-xl border border-gray-100 dark:border-gray-800 max-h-[90vh] overflow-y-auto">
