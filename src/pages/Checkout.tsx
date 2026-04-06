@@ -8,6 +8,7 @@ export const Checkout = () => {
   const { cart, user, orderMode, setOrderMode, getTotalPrice, promos, appliedPromoCode, setAppliedPromoCode } = useStore();
   const navigate = useNavigate();
   const [distance, setDistance] = useState<number | null>(null);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [geoError, setGeoError] = useState('');
   const [isLocating, setIsLocating] = useState(false);
   const [paymentScreenshot, setPaymentScreenshot] = useState<string | null>(null);
@@ -44,8 +45,11 @@ export const Checkout = () => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const dist = calculateDistance(position.coords.latitude, position.coords.longitude, RESTAURANT_COORDS.lat, RESTAURANT_COORDS.lng);
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const dist = calculateDistance(lat, lng, RESTAURANT_COORDS.lat, RESTAURANT_COORDS.lng);
           setDistance(dist);
+          setUserLocation({ lat, lng });
           setIsLocating(false);
         },
         () => {
@@ -76,7 +80,7 @@ export const Checkout = () => {
     }
     
     setIsPlacingOrder(true);
-    const { success, error } = await useStore.getState().placeOrder(paymentScreenshot, utrNumber);
+    const { success, error } = await useStore.getState().placeOrder(paymentScreenshot, utrNumber, userLocation || undefined);
     
     if (success) {
       setOrderComplete(true);

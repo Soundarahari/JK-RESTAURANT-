@@ -17,10 +17,11 @@ export interface Order {
   items: CartItem[];
   total_amount: number;
   order_mode: 'delivery' | 'takeaway';
-  status: 'pending' | 'preparing' | 'completed' | 'cancelled';
+  status: 'pending' | 'preparing' | 'completed' | 'cancelled' | 'out_for_delivery';
   payment_screenshot_url: string | null;
   utr_number: string | null;
   created_at: string;
+  delivery_location?: { lat: number, lng: number } | null;
 }
 
 // Known student email domains — if user's email ends with one of these, they're a student
@@ -66,6 +67,13 @@ export interface Customer {
   last_login: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  image_url: string;
+  created_at?: string;
+}
+
 interface AppState {
   user: UserProfile | null;
   cart: CartItem[];
@@ -81,6 +89,11 @@ interface AppState {
   loginWithEmail: (email: string, name: string, avatarUrl?: string) => void;
   updatePhone: (phone: string) => void;
   logoutUser: () => void;
+  categories: Category[];
+  fetchCategories: () => Promise<void>;
+  addCategory: (category: Omit<Category, 'id' | 'created_at'>) => Promise<void>;
+  updateCategory: (id: string, updates: Partial<Category>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
   setAppliedPromoCode: (promo: Promo | null) => void;
   addPromo: (promo: Omit<Promo, 'id'>) => void;
   deletePromo: (promoId: string) => void;
@@ -95,7 +108,7 @@ interface AppState {
   fetchOrders: () => Promise<void>;
   fetchCustomers: () => Promise<void>;
   fetchUserOrders: (email: string) => Promise<void>;
-  placeOrder: (paymentScreenshot: string, utrNumber: string) => Promise<{ success: boolean; error?: string }>;
+  placeOrder: (paymentScreenshot: string, utrNumber: string, delivery_location?: {lat: number, lng: number}) => Promise<{ success: boolean; error?: string }>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
   getTotalPrice: () => number;
   userPhones: Record<string, string>;
@@ -115,6 +128,31 @@ export const useStore = create<AppState>()(
       setOrderMode: (mode) => set({ orderMode: mode }),
       setUser: (user) => set({ user }),
       userPhones: {},
+      categories: [],
+      fetchCategories: async () => {
+        const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
+        if (!error && data) {
+          set({ categories: data });
+        }
+      },
+      addCategory: async (category) => {
+        const { data, error } = await supabase.from('categories').insert([category]).select();
+        if (!error && data) {
+          set((state) => ({ categories: [...state.categories, data[0]] }));
+        }
+      },
+      updateCategory: async (id, updates) => {
+        const { data, error } = await supabase.from('categories').update(updates).eq('id', id).select();
+        if (!error && data) {
+          set((state) => ({ categories: state.categories.map(c => c.id === id ? data[0] : c) }));
+        }
+      },
+      deleteCategory: async (id) => {
+        const { error } = await supabase.from('categories').delete().eq('id', id);
+        if (!error) {
+          set((state) => ({ categories: state.categories.filter(c => c.id !== id) }));
+        }
+      },
       loginWithEmail: async (email, name, avatarUrl) => {
         const state = get();
         let existingPhone = state.userPhones[email] || '';
@@ -260,7 +298,7 @@ export const useStore = create<AppState>()(
           console.error('Error fetching user orders:', error);
         }
       },
-      placeOrder: async (paymentScreenshot, utrNumber) => {
+      placeOrder: async (paymentScreenshot, utrNumber, delivery_location) => {
         const { user, cart, orderMode, getTotalPrice } = get();
         if (!user || cart.length === 0) return { success: false, error: 'No user or empty cart' };
 
@@ -275,6 +313,7 @@ export const useStore = create<AppState>()(
           status: 'pending',
           payment_screenshot_url: paymentScreenshot || null,
           utr_number: utrNumber || null,
+          delivery_location: delivery_location || null,
         };
 
         const { data, error } = await supabase.from('orders').insert([newOrder]).select();

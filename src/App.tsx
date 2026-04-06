@@ -1,13 +1,15 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Link } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Home } from './pages/Home';
 import { Cart } from './pages/Cart';
 import { Profile } from './pages/Profile';
 import { Checkout } from './pages/Checkout';
 import { Admin } from './pages/Admin';
+import { TrackOrder } from './pages/TrackOrder';
 import { CategoryView } from './pages/CategoryView';
 import { useState, useEffect } from 'react';
-import { Moon, Sun, Download } from 'lucide-react';
+import { Moon, Sun, Download, User } from 'lucide-react';
+import { useStore } from './store';
 
 // Automatically scrolls to top on every route change
 function ScrollToTop() {
@@ -40,6 +42,7 @@ function RouteTracker() {
 }
 
 function App() {
+  const user = useStore(state => state.user);
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('jk-dark-mode');
     if (saved !== null) return saved === 'true';
@@ -104,9 +107,18 @@ function App() {
               )}
             </div>
             <h1 className="text-2xl font-black text-center text-brand-600 tracking-tight">JK Restaurant</h1>
-            <button onClick={() => setDarkMode(!darkMode)} className="p-2 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
-              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setDarkMode(!darkMode)} className="p-2 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+              <Link to="/profile" className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden border border-gray-300 dark:border-gray-700 shadow-sm active:scale-95 transition-transform">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={16} className="text-gray-500" />
+                )}
+              </Link>
+            </div>
           </div>
 
           {/* Desktop header — full width */}
@@ -132,6 +144,13 @@ function App() {
               <button onClick={() => setDarkMode(!darkMode)} className="p-2.5 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                 {darkMode ? <Sun size={18} /> : <Moon size={18} />}
               </button>
+              <Link to="/profile" className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden border border-gray-300 dark:border-gray-700 hover:border-brand-500 transition-colors shadow-sm ml-2">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={20} className="text-gray-500" />
+                )}
+              </Link>
             </div>
           </div>
         </header>
@@ -160,6 +179,7 @@ function App() {
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/track/:orderId" element={<TrackOrder />} />
             </Routes>
           </main>
         </div>

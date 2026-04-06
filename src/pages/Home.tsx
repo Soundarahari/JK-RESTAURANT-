@@ -78,10 +78,13 @@ const BestsellerCard = ({ product }: { product: Product }) => {
 
 /* ══════════════════════════════════════════ */
 export const Home = () => {
-  const { products, fetchProducts, cart, getTotalPrice, user } = useStore();
+  const { products, fetchProducts, cart, getTotalPrice, user, categories, fetchCategories } = useStore();
   const navigate = useNavigate();
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  useEffect(() => { 
+    fetchProducts(); 
+    fetchCategories();
+  }, [fetchProducts, fetchCategories]);
 
   const [showTopBtn, setShowTopBtn] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,7 +99,7 @@ export const Home = () => {
   const cartTotal = getTotalPrice();
 
   /* ── Derived data ── */
-  const subCategories = useMemo(() => {
+  const derivedSubCategories = useMemo(() => {
     const map = new Map<string, { name: string; image: string; count: number }>();
     products.forEach(p => {
       const key = p.sub_category || p.name;
@@ -105,6 +108,10 @@ export const Home = () => {
     });
     return Array.from(map.values()).sort((a, b) => b.count - a.count);
   }, [products]);
+
+  const displayCategories = categories.length > 0 
+    ? categories.map(c => ({ name: c.name, image: c.image_url })) 
+    : derivedSubCategories;
 
   const mainCategories = useMemo(() => {
     const map = new Map<string, { name: string; count: number }>();
@@ -200,7 +207,7 @@ export const Home = () => {
               What's on your mind?
             </h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-2 gap-y-5">
-              {subCategories.map((sc, i) => (
+              {displayCategories.map((sc, i) => (
                 <Link key={sc.name} to={`/category/${encodeURIComponent(sc.name)}`}
                   className="flex flex-col items-center group animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
                   <div className="w-[76px] h-[76px] lg:w-24 lg:h-24 rounded-full overflow-hidden border-[3px] border-white dark:border-gray-800 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110 group-active:scale-95 bg-gray-100 dark:bg-gray-800 ring-2 ring-gray-100 dark:ring-gray-700">

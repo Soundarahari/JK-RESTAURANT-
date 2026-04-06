@@ -5,14 +5,14 @@ import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, Che
 import { useNavigate } from 'react-router-dom';
 
 export const Admin = () => {
-  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo } = useStore();
+  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, deleteCategory, fetchCategories } = useStore();
   const navigate = useNavigate();
   
   // 1. Admin Authorization check first
   const isAdmin = checkIsAdmin(user);
 
   // 2. Component State Hooks
-  const [activeTab, setActiveTab] = useState<'orders' | 'promos' | 'menu' | 'users'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'promos' | 'menu' | 'users' | 'categories'>('orders');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newDish, setNewDish] = useState<Partial<Product>>({ 
     is_available: true, 
@@ -25,6 +25,8 @@ export const Admin = () => {
   });
   
   const [newPromo, setNewPromo] = useState({ code: '', discount_type: 'percentage' as 'percentage' | 'flat', discount_value: 10, is_active: true });
+  
+  const [newCategoryData, setNewCategoryData] = useState({ name: '', image_url: '' });
   
   const [menuSearch, setMenuSearch] = useState('');
   const [menuCategoryFilter, setMenuCategoryFilter] = useState<string>('All');
@@ -41,6 +43,7 @@ export const Admin = () => {
 
   useEffect(() => {
     fetchProducts();
+    fetchCategories();
     if (isAdmin) {
       fetchOrders();
       fetchCustomers();
@@ -211,9 +214,15 @@ export const Admin = () => {
         </button>
         <button 
           onClick={() => setActiveTab('users')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${activeTab === 'users' ? 'bg-brand-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
+          className={`flex-1 py-2 text-[10px] sm:text-xs font-bold rounded-lg transition-colors ${activeTab === 'users' ? 'bg-brand-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
         >
           USERS
+        </button>
+        <button 
+          onClick={() => setActiveTab('categories')}
+          className={`flex-1 py-2 text-[10px] sm:text-xs font-bold rounded-lg transition-colors ${activeTab === 'categories' ? 'bg-brand-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
+        >
+          CATEGORIES
         </button>
       </div>
 
@@ -293,10 +302,18 @@ export const Admin = () => {
                   )}
                   {order.status === 'preparing' && (
                     <button
+                      onClick={() => updateOrderStatus(order.id, order.order_mode === 'delivery' ? 'out_for_delivery' : 'completed')}
+                      className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-2.5 rounded-xl text-[11px] uppercase tracking-widest shadow-md transition-all active:scale-95"
+                    >
+                      {order.order_mode === 'delivery' ? 'Out for Delivery' : 'Mark Completed'}
+                    </button>
+                  )}
+                  {order.status === 'out_for_delivery' && (
+                    <button
                       onClick={() => updateOrderStatus(order.id, 'completed')}
                       className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-2.5 rounded-xl text-[11px] uppercase tracking-widest shadow-md transition-all active:scale-95"
                     >
-                      Mark Completed
+                      Mark Delivered
                     </button>
                   )}
                   {order.status !== 'completed' && order.status !== 'cancelled' && (
@@ -606,6 +623,77 @@ export const Admin = () => {
                 )}
               </div>
             </section>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'categories' && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
+            <h3 className="font-black text-sm text-gray-800 dark:text-white mb-4 uppercase tracking-wider">Create New Category</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Category Name</label>
+                <input 
+                  type="text" 
+                  value={newCategoryData.name} 
+                  onChange={e => setNewCategoryData({...newCategoryData, name: e.target.value})}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm outline-none focus:ring-1"
+                  placeholder="e.g., Burgers"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Image URL</label>
+                <input 
+                  type="text" 
+                  value={newCategoryData.image_url} 
+                  onChange={e => setNewCategoryData({...newCategoryData, image_url: e.target.value})}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm outline-none focus:ring-1"
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+            {newCategoryData.image_url && (
+              <div className="mb-4 flex items-center gap-3">
+                <span className="text-xs font-bold text-gray-500">Preview:</span>
+                <img src={newCategoryData.image_url} alt="Preview" className="w-12 h-12 rounded-full object-cover border-2 border-brand-500" />
+              </div>
+            )}
+            <button 
+              onClick={() => {
+                if (newCategoryData.name && newCategoryData.image_url) {
+                  addCategory({ ...newCategoryData });
+                  setNewCategoryData({ name: '', image_url: '' });
+                }
+              }}
+              className="bg-brand-500 text-white font-black py-3 px-6 rounded-xl text-xs uppercase tracking-widest active:scale-95 transition-transform"
+            >
+              Add Category
+            </button>
+          </div>
+
+          <div className="space-y-3 mt-6">
+            <h3 className="font-black text-sm text-gray-800 dark:text-white uppercase tracking-wider mb-3">Active Categories ({categories.length})</h3>
+            {categories.length === 0 ? (
+               <p className="text-gray-500 text-sm">No categories created yet.</p>
+            ) : (
+              categories.map(cat => (
+                <div key={cat.id} className="flex items-center justify-between bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 rounded-xl shadow-sm">
+                  <div className="flex items-center gap-4">
+                    <img src={cat.image_url} alt={cat.name} className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700" />
+                    <div>
+                      <h4 className="font-black text-gray-800 dark:text-white text-lg tracking-wider">{cat.name}</h4>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => deleteCategory(cat.id)}
+                    className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

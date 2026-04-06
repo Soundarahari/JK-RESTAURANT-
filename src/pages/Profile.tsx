@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useStore, isAdmin as checkIsAdmin } from '../store';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, LogOut, GraduationCap, Shield, User, ArrowRight, Smartphone, Package } from 'lucide-react';
+import { CheckCircle, LogOut, GraduationCap, Shield, User, ArrowRight, Smartphone, Package, MapPin } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const Profile = () => {
   const { user, loginWithEmail, logoutUser, updatePhone, orders, fetchUserOrders, promos, appliedPromoCode, setAppliedPromoCode } = useStore();
@@ -326,19 +327,29 @@ export const Profile = () => {
                   <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
                     order.status === 'pending' ? 'bg-yellow-50 text-yellow-600 border-yellow-200' :
                     order.status === 'preparing' ? 'bg-blue-50 text-blue-600 border-blue-200 animate-pulse' :
+                    order.status === 'out_for_delivery' ? 'bg-brand-50 text-brand-600 border-brand-200 animate-pulse' :
                     order.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
                     'bg-gray-100 text-gray-600 border-gray-200'
                   }`}>
-                    {order.status}
+                    {order.status === 'out_for_delivery' ? 'Out for Delivery' : order.status}
                   </div>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 mb-3">
                   {order.items.map((item, idx) => (
                     <p key={idx} className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                       <span className="font-black text-gray-900 dark:text-white mr-1.5">{item.quantity}x</span> {item.name}
                     </p>
                   ))}
                 </div>
+                
+                {order.status === 'out_for_delivery' && (
+                  <Link 
+                    to={`/track/${order.id}`}
+                    className="mt-2 w-full bg-brand-500 hover:bg-brand-600 text-white font-black py-2.5 rounded-xl text-[11px] uppercase tracking-widest shadow-md flex items-center justify-center gap-2 transition-all active:scale-95"
+                  >
+                    <MapPin size={14} /> Track Delivery (Live)
+                  </Link>
+                )}
               </div>
             ))}
           </div>
