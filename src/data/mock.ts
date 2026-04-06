@@ -13,6 +13,7 @@ export interface Product {
   is_veg: boolean;
   bestseller: boolean;
   spicy: boolean;
+  prep_time: number;
 }
 
 export const COLLEGES = [
@@ -39,6 +40,7 @@ export const MOCK_PRODUCTS: Product[] = [
     is_veg: true,
     bestseller: true,
     spicy: false,
+    prep_time: 15,
   },
   {
     id: 'p2',
@@ -55,6 +57,7 @@ export const MOCK_PRODUCTS: Product[] = [
     is_veg: true,
     bestseller: false,
     spicy: false,
+    prep_time: 15,
   },
   {
     id: 'p3',
@@ -71,6 +74,7 @@ export const MOCK_PRODUCTS: Product[] = [
     is_veg: true,
     bestseller: true,
     spicy: true,
+    prep_time: 15,
   },
   {
     id: 'p4',
@@ -87,6 +91,7 @@ export const MOCK_PRODUCTS: Product[] = [
     is_veg: true,
     bestseller: false,
     spicy: true,
+    prep_time: 15,
   },
   {
     id: 'p5',
@@ -103,5 +108,6 @@ export const MOCK_PRODUCTS: Product[] = [
     is_veg: true,
     bestseller: true,
     spicy: false,
+    prep_time: 15,
   }
 ];

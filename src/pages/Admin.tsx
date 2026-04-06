@@ -5,14 +5,14 @@ import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, Che
 import { useNavigate } from 'react-router-dom';
 
 export const Admin = () => {
-  const { products, updateProduct, addProduct, fetchProducts, user, verifications, updateVerificationStatus, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus } = useStore();
+  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo } = useStore();
   const navigate = useNavigate();
   
   // 1. Admin Authorization check first
   const isAdmin = checkIsAdmin(user);
 
   // 2. Component State Hooks
-  const [activeTab, setActiveTab] = useState<'orders' | 'verification' | 'menu' | 'users'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'promos' | 'menu' | 'users'>('orders');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newDish, setNewDish] = useState<Partial<Product>>({ 
     is_available: true, 
@@ -20,8 +20,11 @@ export const Admin = () => {
     spicy: false, 
     is_veg: true, 
     rating: 0, 
-    reviews: 0 
+    reviews: 0,
+    prep_time: 15
   });
+  
+  const [newPromo, setNewPromo] = useState({ code: '', discount_type: 'percentage' as 'percentage' | 'flat', discount_value: 10, is_active: true });
   
   const [menuSearch, setMenuSearch] = useState('');
   const [menuCategoryFilter, setMenuCategoryFilter] = useState<string>('All');
@@ -133,7 +136,6 @@ export const Admin = () => {
   };
 
   
-  const pendingVerifications = verifications.filter(v => v.status === 'pending');
   const activeOrders = adminOrders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
   const totalRevenue = adminOrders
     .filter(o => o.status === 'completed')
@@ -196,15 +198,10 @@ export const Admin = () => {
           ORDERS
         </button>
         <button 
-          onClick={() => setActiveTab('verification')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors relative ${activeTab === 'verification' ? 'bg-brand-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
+          onClick={() => setActiveTab('promos')}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors relative ${activeTab === 'promos' ? 'bg-brand-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
         >
-          VERIFY
-          {pendingVerifications.length > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900 font-black shadow-sm">
-              {pendingVerifications.length}
-            </span>
-          )}
+          PROMOS
         </button>
         <button 
           onClick={() => setActiveTab('menu')}
@@ -317,56 +314,85 @@ export const Admin = () => {
         </div>
       )}
 
-      {activeTab === 'verification' && (
-        <div className="space-y-4">
-          {pendingVerifications.length === 0 ? (
-            <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800">
-              <div className="text-5xl mb-3">🎓</div>
-              <p className="text-gray-500 dark:text-gray-400 font-semibold text-sm">Clear Coast!</p>
-              <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">No pending student ID verifications</p>
-            </div>
-          ) : (
-            pendingVerifications.map(req => (
-              <div key={req.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 shadow-sm animate-fade-in translate-y-0 transition-colors">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="font-black text-gray-900 dark:text-white text-sm">{req.user_name}</h3>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-tighter mt-1">{req.user_email}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{new Date(req.created_at).toLocaleDateString()} at {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                  </div>
-                  <div className="px-2 py-1 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-[10px] font-black uppercase rounded-lg border border-yellow-200 dark:border-yellow-900/50">
-                    Pending
-                  </div>
-                </div>
-
-                <div className="relative group mb-4">
-                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 mb-2 uppercase tracking-widest">ID Card Evidence</p>
-                  <div className="aspect-[16/10] bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden shadow-inner border border-gray-100 dark:border-gray-800">
-                    <img 
-                      src={req.id_card_url} 
-                      alt="Student ID Card" 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => updateVerificationStatus(req.id, 'confirmed')}
-                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider shadow-md shadow-emerald-200 dark:shadow-none transition-all active:scale-95"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => updateVerificationStatus(req.id, 'rejected')}
-                    className="flex-1 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 font-black py-3 rounded-xl text-xs uppercase tracking-wider hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-95"
-                  >
-                    Reject
-                  </button>
-                </div>
+      {activeTab === 'promos' && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
+            <h3 className="font-black text-sm text-gray-800 dark:text-white mb-4 uppercase tracking-wider">Create Promo Code</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Code</label>
+                <input 
+                  type="text" 
+                  value={newPromo.code} 
+                  onChange={e => setNewPromo({...newPromo, code: e.target.value.toUpperCase()})}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm outline-none focus:ring-1 uppercase"
+                  placeholder="e.g., WINTER10"
+                />
               </div>
-            ))
-          )}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Discount Type</label>
+                <select 
+                  value={newPromo.discount_type} 
+                  onChange={e => setNewPromo({...newPromo, discount_type: e.target.value as 'percentage' | 'flat'})}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm outline-none"
+                >
+                  <option value="percentage">Percentage (%)</option>
+                  <option value="flat">Flat Amount (₹)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Discount Value</label>
+                <input 
+                  type="number" 
+                  value={newPromo.discount_value} 
+                  onChange={e => setNewPromo({...newPromo, discount_value: Number(e.target.value)})}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm outline-none"
+                  placeholder="Optional min amount"
+                />
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                if (newPromo.code && newPromo.discount_value > 0) {
+                  addPromo({ ...newPromo });
+                  setNewPromo({ code: '', discount_type: 'percentage', discount_value: 10, is_active: true });
+                }
+              }}
+              className="bg-brand-500 text-white font-black py-3 px-6 rounded-xl text-xs uppercase tracking-widest active:scale-95 transition-transform"
+            >
+              Add Promo Code
+            </button>
+          </div>
+
+          <div className="space-y-3 mt-6">
+            <h3 className="font-black text-sm text-gray-800 dark:text-white uppercase tracking-wider mb-3">Active Promos ({promos.length})</h3>
+            {promos.length === 0 ? (
+               <p className="text-gray-500 text-sm">No promo codes created yet.</p>
+            ) : (
+              promos.map(promo => (
+                <div key={promo.id} className="flex items-center justify-between bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 rounded-xl shadow-sm">
+                  <div>
+                    <h4 className="font-black text-brand-600 dark:text-brand-400 text-lg uppercase tracking-wider">{promo.code}</h4>
+                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-1">
+                      {promo.discount_type === 'percentage' ? `${promo.discount_value}% OFF` : `₹${promo.discount_value} FLAT RATE`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" checked={promo.is_active} onChange={(e) => togglePromo(promo.id, e.target.checked)} />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+                    </label>
+                    <button 
+                      onClick={() => deletePromo(promo.id)}
+                      className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
 
@@ -460,7 +486,7 @@ export const Admin = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                      <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
                         <div>
                           <label className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Base Price</label>
                           <div className="flex items-center mt-1">
@@ -482,6 +508,17 @@ export const Admin = () => {
                               value={product.student_price} 
                               onChange={(e) => updateProduct(product.id, { student_price: Number(e.target.value) })}
                               className="w-full bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 border-none rounded py-1 px-2 text-sm font-bold outline-none focus:ring-1 focus:ring-brand-500"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-bold tracking-wider">Prep (m)</label>
+                          <div className="flex items-center mt-1">
+                            <input 
+                              type="number" 
+                              value={product.prep_time || 15} 
+                              onChange={(e) => updateProduct(product.id, { prep_time: Number(e.target.value) })}
+                              className="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-none rounded py-1 px-2 text-sm font-bold outline-none focus:ring-1 focus:ring-brand-500"
                             />
                           </div>
                         </div>
@@ -705,14 +742,18 @@ export const Admin = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Base Price (₹)</label>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Base Price</label>
                   <input type="number" className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:border-brand-500" placeholder="100" onChange={e => setNewDish({...newDish, base_price: Number(e.target.value)})} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-1">Student Price (₹)</label>
+                  <label className="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-1">Student Price</label>
                   <input type="number" className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:border-brand-500" placeholder="80" onChange={e => setNewDish({...newDish, student_price: Number(e.target.value)})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Prep Time (min)</label>
+                  <input type="number" value={newDish.prep_time} className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:border-brand-500" placeholder="15" onChange={e => setNewDish({...newDish, prep_time: Number(e.target.value)})} />
                 </div>
               </div>
               <div>
@@ -743,7 +784,7 @@ export const Admin = () => {
                       sub_category: newDishSubCategory || newDish.name || '',
                     } as Omit<Product, 'id'>);
                     setShowAddModal(false);
-                    setNewDish({ is_available: true, bestseller: false, spicy: false, is_veg: true, rating: 0, reviews: 0 });
+                    setNewDish({ is_available: true, bestseller: false, spicy: false, is_veg: true, rating: 0, reviews: 0, prep_time: 15 });
                     setNewDishSubCategory('');
                     setIsAddingNewCategory(false);
                     setCustomCategory('');

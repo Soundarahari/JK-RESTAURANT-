@@ -45,18 +45,14 @@ export interface UserProfile {
   avatar_url?: string;
   is_student: boolean;
   college_name?: string;
-  id_card_url?: string;
-  verification_status: 'pending' | 'verified' | 'rejected' | 'none';
 }
 
-export interface VerificationRequest {
+export interface Promo {
   id: string;
-  user_id: string;
-  user_name: string;
-  user_email: string;
-  id_card_url: string;
-  status: 'pending' | 'confirmed' | 'rejected';
-  created_at: string;
+  code: string;
+  discount_type: 'percentage' | 'flat';
+  discount_value: number;
+  is_active: boolean;
 }
 
 export interface Customer {
@@ -77,15 +73,18 @@ interface AppState {
   orders: Order[];
   adminOrders: Order[];
   customers: Customer[];
-  verifications: VerificationRequest[];
   orderMode: 'delivery' | 'takeaway';
+  promos: Promo[];
+  appliedPromoCode: Promo | null;
   setOrderMode: (mode: 'delivery' | 'takeaway') => void;
   setUser: (user: UserProfile | null) => void;
   loginWithEmail: (email: string, name: string, avatarUrl?: string) => void;
   updatePhone: (phone: string) => void;
   logoutUser: () => void;
-  submitVerification: (idCardUrl: string) => void;
-  updateVerificationStatus: (requestId: string, status: 'confirmed' | 'rejected') => void;
+  setAppliedPromoCode: (promo: Promo | null) => void;
+  addPromo: (promo: Omit<Promo, 'id'>) => void;
+  deletePromo: (promoId: string) => void;
+  togglePromo: (promoId: string, isActive: boolean) => void;
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -110,7 +109,8 @@ export const useStore = create<AppState>()(
       orders: [],
       adminOrders: [],
       customers: [],
-      verifications: [],
+      promos: [{ id: 'promo1', code: 'WELCOME10', discount_type: 'percentage', discount_value: 10, is_active: true }],
+      appliedPromoCode: null,
       orderMode: 'delivery',
       setOrderMode: (mode) => set({ orderMode: mode }),
       setUser: (user) => set({ user }),
@@ -129,7 +129,6 @@ export const useStore = create<AppState>()(
             phone: existingPhone,
             avatar_url: avatarUrl,
             is_student: studentDetected,
-            verification_status: studentDetected ? 'verified' : 'none',
           }
         });
 
@@ -162,46 +161,14 @@ export const useStore = create<AppState>()(
             });
         }
       },
-      logoutUser: () => set({ user: null, cart: [], orders: [], adminOrders: [] }),
+      logoutUser: () => set({ user: null, cart: [], orders: [], adminOrders: [], appliedPromoCode: null }),
       
-      submitVerification: (idCardUrl) => set((state) => {
-        if (!state.user) return state;
-        const newRequest: VerificationRequest = {
-          id: `v_${Date.now()}`,
-          user_id: state.user.id,
-          user_name: state.user.full_name,
-          user_email: state.user.email,
-          id_card_url: idCardUrl,
-          status: 'pending',
-          created_at: new Date().toISOString(),
-        };
-        return {
-          user: { ...state.user, verification_status: 'pending', id_card_url: idCardUrl },
-          verifications: [newRequest, ...state.verifications],
-        };
-      }),
-
-      updateVerificationStatus: (requestId, status) => set((state) => {
-        const request = state.verifications.find(v => v.id === requestId);
-        if (!request) return state;
-        
-        const isConfirmed = status === 'confirmed';
-        const updatedVerifications = state.verifications.map(v => 
-          v.id === requestId ? { ...v, status } : v
-        );
-
-        // If this is the current user being verified, update their profile too
-        const isCurrentUser = state.user?.id === request.user_id;
-
-        return {
-          verifications: updatedVerifications,
-          user: isCurrentUser ? { 
-            ...state.user!, 
-            verification_status: isConfirmed ? 'verified' : 'rejected',
-            is_student: isConfirmed
-          } : state.user
-        };
-      }),
+      setAppliedPromoCode: (promo) => set({ appliedPromoCode: promo }),
+      addPromo: (promo) => set((state) => ({ promos: [...state.promos, { ...promo, id: `promo_${Date.now()}` }] })),
+      deletePromo: (promoId) => set((state) => ({ promos: state.promos.filter(p => p.id !== promoId) })),
+      togglePromo: (promoId, is_active) => set((state) => ({ 
+        promos: state.promos.map(p => p.id === promoId ? { ...p, is_active } : p) 
+      })),
 
       addToCart: (product) => set((state) => {
         const existingItem = state.cart.find(item => item.id === product.id);
@@ -342,11 +309,23 @@ export const useStore = create<AppState>()(
         }
       },
       getTotalPrice: () => {
-        return get().cart.reduce((sum, item) => {
-          const isStudentVerified = get().user?.verification_status === 'verified';
+        const { cart, user, appliedPromoCode } = get();
+        
+        let subtotal = cart.reduce((sum, item) => {
+          const isStudentVerified = user?.is_student;
           const price = isStudentVerified ? item.student_price : item.base_price;
           return sum + (price * item.quantity);
         }, 0);
+        
+        if (appliedPromoCode && !user?.is_student) {
+          if (appliedPromoCode.discount_type === 'percentage') {
+            subtotal = subtotal - (subtotal * appliedPromoCode.discount_value / 100);
+          } else {
+            subtotal = Math.max(0, subtotal - appliedPromoCode.discount_value);
+          }
+        }
+        
+        return subtotal;
       }
     }),
     {
@@ -354,7 +333,7 @@ export const useStore = create<AppState>()(
       partialize: (state) => ({
         user: state.user,
         cart: state.cart,
-        verifications: state.verifications,
+        promos: state.promos,
         orderMode: state.orderMode,
       }),
     }

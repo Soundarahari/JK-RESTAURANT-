@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useStore, isAdmin as checkIsAdmin } from '../store';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, LogOut, GraduationCap, Shield, User, Clock, Upload, ArrowRight, Smartphone, Package } from 'lucide-react';
+import { CheckCircle, LogOut, GraduationCap, Shield, User, ArrowRight, Smartphone, Package } from 'lucide-react';
 
 export const Profile = () => {
-  const { user, loginWithEmail, logoutUser, submitVerification, updatePhone, orders, fetchUserOrders } = useStore();
+  const { user, loginWithEmail, logoutUser, updatePhone, orders, fetchUserOrders, promos, appliedPromoCode, setAppliedPromoCode } = useStore();
 
   // Phone collection state (Mandatory after Google login)
   const [phoneInput, setPhoneInput] = useState('');
@@ -75,12 +75,24 @@ export const Profile = () => {
     logoutUser();
   };
 
-  const isVerified = user?.verification_status === 'verified';
+  const isVerified = user?.is_student;
   const needsPhone = user && !user.phone;
 
   // ==========================================
   // NOT LOGGED IN — Show Google Login Screen
   // ==========================================
+  const [promoInput, setPromoInput] = useState('');
+
+  const handleApplyPromo = () => {
+    const promo = promos.find(p => p.code.toUpperCase() === promoInput.toUpperCase() && p.is_active);
+    if (!promo) {
+      alert('Invalid or inactive promo code.');
+      return;
+    }
+    setAppliedPromoCode(promo);
+    setPromoInput('');
+  };
+
   if (!user) {
     return (
       <div className="pb-24 flex flex-col items-center justify-center min-h-[60vh] px-4">
@@ -240,36 +252,45 @@ export const Profile = () => {
               <p className="text-xs mt-1 leading-relaxed opacity-80">You are eligible for student-only pricing on all menu items.</p>
             </div>
           </div>
-        ) : user.verification_status === 'pending' ? (
-          <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-900/50 text-blue-700 dark:text-blue-400 p-5 rounded-2xl flex items-start gap-4">
-            <div className="w-10 h-10 bg-blue-500 text-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/20">
-              <Clock size={20} />
-            </div>
-            <div>
-              <p className="font-black text-sm">Verification Pending</p>
-              <p className="text-xs mt-1 leading-relaxed opacity-80">Your ID is being reviewed. Status will update within 24h.</p>
-            </div>
-          </div>
         ) : (
-          <div className="space-y-6">
-            <div className="bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 p-5 rounded-2xl">
-              <p className="font-black text-sm text-gray-800 dark:text-white uppercase tracking-tight">Regular Customer</p>
-              <p className="text-xs mt-1 text-gray-500 leading-relaxed font-medium">To unlock student pricing, upload your college ID card below for manual approval.</p>
-            </div>
-
-            <div className="group relative border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-3xl p-8 text-center bg-gray-50/30 dark:bg-gray-800/30 hover:border-brand-500 transition-colors">
-              <div className="w-14 h-14 bg-white dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-700 text-brand-500 group-hover:scale-110 transition-transform">
-                <Upload size={24} />
+          <div className="space-y-4">
+            {appliedPromoCode ? (
+              <div className="bg-brand-50/50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-900/50 p-5 rounded-2xl flex items-center justify-between">
+                <div>
+                  <p className="font-black text-sm text-brand-700 dark:text-brand-400">Promo Applied: {appliedPromoCode.code}</p>
+                  <p className="text-xs mt-0.5 text-brand-600/80 dark:text-brand-500 font-medium">
+                    {appliedPromoCode.discount_type === 'percentage' ? `${appliedPromoCode.discount_value}% OFF` : `₹${appliedPromoCode.discount_value} OFF`} active on your cart.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setAppliedPromoCode(null)}
+                  className="text-red-500 font-bold text-xs uppercase hover:underline"
+                >
+                  Remove
+                </button>
               </div>
-              <h4 className="text-sm font-black text-gray-900 dark:text-white">Upload ID Card</h4>
-              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2 mb-6 max-w-[200px] mx-auto leading-normal">Clear photo required (Name and College Name must be visible).</p>
-              <button
-                onClick={() => submitVerification('https://images.pexels.com/photos/1015568/pexels-photo-1015568.jpeg?auto=compress&cs=tinysrgb&w=500')}
-                className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black py-3 px-8 rounded-xl text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all"
-              >
-                Choose File
-              </button>
-            </div>
+            ) : (
+              <div className="bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 p-5 rounded-2xl">
+                <p className="font-black text-sm text-gray-800 dark:text-white uppercase tracking-tight">Regular Customer</p>
+                <p className="text-xs mt-1 text-gray-500 leading-relaxed font-medium mb-4">Have a promo code? Enter it below to unlock special pricing.</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter Promo Code"
+                    value={promoInput}
+                    onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                    className="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 text-sm font-bold outline-none focus:border-brand-500 uppercase placeholder:normal-case"
+                  />
+                  <button
+                    onClick={handleApplyPromo}
+                    disabled={!promoInput}
+                    className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 font-black rounded-xl text-xs uppercase tracking-widest disabled:opacity-50 active:scale-95 transition-all"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

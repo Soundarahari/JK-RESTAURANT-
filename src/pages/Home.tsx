@@ -18,7 +18,7 @@ const CATEGORY_GRADIENTS: Record<string, string> = {
 const BestsellerCard = ({ product }: { product: Product }) => {
   const { addToCart, cart, removeFromCart, updateQuantity, user } = useStore();
   const cartItem = cart.find(item => item.id === product.id);
-  const isStudentVerified = user?.is_student && user?.verification_status === 'verified';
+  const isStudentVerified = user?.is_student;
 
   return (
     <div className="min-w-[250px] max-w-[280px] snap-start bg-white dark:bg-gray-900 rounded-2xl shadow-md border border-gray-100/50 dark:border-gray-800/50 overflow-hidden flex-shrink-0 group">
@@ -27,8 +27,13 @@ const BestsellerCard = ({ product }: { product: Product }) => {
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400'; }}
         />
-        <div className="absolute top-2.5 left-2.5 bg-amber-400/90 backdrop-blur-sm text-gray-900 text-[9px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
-          <Star size={8} fill="currentColor" /> BESTSELLER
+        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
+          <div className="bg-amber-400/90 backdrop-blur-sm text-gray-900 text-[9px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm self-start">
+            <Star size={8} fill="currentColor" /> BESTSELLER
+          </div>
+          <div className="bg-white/90 backdrop-blur-sm text-gray-900 text-[9px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm self-start">
+            <Clock size={8} className="text-gray-500" /> {product.prep_time || 15} MIN
+          </div>
         </div>
         <div className="absolute bottom-2.5 left-2.5">
           <div className={`p-1 rounded-md backdrop-blur-sm bg-white/90 border-2 ${product.is_veg ? 'border-green-500' : 'border-red-500'}`}>

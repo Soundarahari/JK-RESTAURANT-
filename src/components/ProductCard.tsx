@@ -1,11 +1,11 @@
 import { Product } from '../data/mock';
 import { useStore } from '../store';
-import { Plus, Minus, Star, Heart, Flame } from 'lucide-react';
+import { Plus, Minus, Star, Heart, Flame, Clock } from 'lucide-react';
 
 export const ProductCard = ({ product }: { product: Product }) => {
   const { user, cart, addToCart, removeFromCart, updateQuantity } = useStore();
   const cartItem = cart.find(item => item.id === product.id);
-  const isStudentVerified = user?.is_student && user?.verification_status === 'verified';
+  const isStudentVerified = user?.is_student;
 
   return (
     <div className={`group bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100/50 dark:border-gray-800/50 flex flex-col relative ${
@@ -39,6 +39,9 @@ export const ProductCard = ({ product }: { product: Product }) => {
                 <Flame size={10} fill="currentColor" /> SPICY
               </div>
             )}
+            <div className="bg-white/90 backdrop-blur-md text-gray-900 text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 animate-in slide-in-from-left delay-100">
+              <Clock size={10} className="text-gray-500" /> {product.prep_time || 15} MIN
+            </div>
           </div>
           
           <button className="w-9 h-9 bg-white/20 backdrop-blur-md border border-white/30 rounded-full flex items-center justify-center text-white hover:bg-rose-500 transition-colors shadow-lg active:scale-90">

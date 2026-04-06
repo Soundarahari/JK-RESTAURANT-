@@ -5,7 +5,7 @@ import { Navigation, Upload, CheckCircle2, Edit3, ShoppingBag, Package, Copy, Ar
 import { calculateDistance, RESTAURANT_COORDS, MAX_DELIVERY_RADIUS_KM } from '../utils/geo';
 
 export const Checkout = () => {
-  const { cart, user, orderMode, setOrderMode, getTotalPrice } = useStore();
+  const { cart, user, orderMode, setOrderMode, getTotalPrice, promos, appliedPromoCode, setAppliedPromoCode } = useStore();
   const navigate = useNavigate();
   const [distance, setDistance] = useState<number | null>(null);
   const [geoError, setGeoError] = useState('');
@@ -15,8 +15,21 @@ export const Checkout = () => {
   const [orderComplete, setOrderComplete] = useState(false);
   const [cookingInstructions, setCookingInstructions] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [promoInput, setPromoInput] = useState('');
 
+  const handleApplyPromo = () => {
+    const promo = promos.find(p => p.code.toUpperCase() === promoInput.toUpperCase() && p.is_active);
+    if (!promo) {
+      alert('Invalid or inactive promo code.');
+      return;
+    }
+    setAppliedPromoCode(promo);
+    setPromoInput('');
+  };
+
+  const subtotalBeforeDiscount = cart.reduce((sum, item) => sum + ((user?.is_student ? item.student_price : item.base_price) * item.quantity), 0);
   const itemTotal = getTotalPrice();
+  const discountAmount = subtotalBeforeDiscount - itemTotal;
   const platformFee = 5;
   const gstAndCharges = Math.round(itemTotal * 0.05);
   const isTakeaway = orderMode === 'takeaway';
@@ -184,6 +197,89 @@ export const Checkout = () => {
           onChange={(e) => setCookingInstructions(e.target.value)}
           className="w-full text-sm bg-gray-50 dark:bg-gray-800 border-none rounded-lg p-3 outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-gray-200"
         />
+      </div>
+
+      {/* Bill Summary & Promo */}
+      <div className="bg-white dark:bg-gray-900 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-6">
+        {user?.is_student ? (
+          <div className="bg-green-50/50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/50 p-4 rounded-2xl mb-6 flex items-center justify-between">
+            <div>
+              <p className="font-black text-sm text-green-700 dark:text-green-400">Student Verified ✓</p>
+              <p className="text-xs mt-0.5 text-green-600/80 dark:text-green-500 font-medium">Student discount automatically applied to prices.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6">
+            {appliedPromoCode ? (
+              <div className="bg-brand-50/50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-900/50 p-4 rounded-2xl flex items-center justify-between">
+                <div>
+                  <p className="font-black text-sm text-brand-700 dark:text-brand-400">Promo Applied: {appliedPromoCode.code}</p>
+                  <p className="text-xs mt-0.5 text-brand-600/80 dark:text-brand-500 font-medium">
+                    {appliedPromoCode.discount_type === 'percentage' ? `${appliedPromoCode.discount_value}% OFF` : `₹${appliedPromoCode.discount_value} OFF`} active.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setAppliedPromoCode(null)}
+                  className="text-red-500 font-bold text-xs uppercase hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Have a promo code?"
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                  className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 text-sm font-bold outline-none focus:border-brand-500 uppercase placeholder:normal-case"
+                />
+                <button
+                  onClick={handleApplyPromo}
+                  disabled={!promoInput}
+                  className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 font-black rounded-xl text-xs uppercase tracking-widest disabled:opacity-50 active:scale-95 transition-all"
+                >
+                  Apply
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <h3 className="font-black text-sm mb-4 text-gray-900 dark:text-white uppercase tracking-wider">Bill Summary</h3>
+        <div className="space-y-3 mb-4 text-sm font-bold text-gray-600 dark:text-gray-300">
+          <div className="flex justify-between">
+            <span>Item Total</span>
+            <span>₹{subtotalBeforeDiscount}</span>
+          </div>
+          {discountAmount > 0 && (
+            <div className="flex justify-between text-brand-500">
+              <span>Discount ({appliedPromoCode?.code || 'Student'})</span>
+              <span>-₹{discountAmount}</span>
+            </div>
+          )}
+          {!isTakeaway && (
+            <div className="flex justify-between">
+              <span>Delivery Fee</span>
+              <span>₹{deliveryFee}</span>
+            </div>
+          )}
+          {!isTakeaway && (
+            <div className="flex justify-between">
+              <span>Platform Fee</span>
+              <span>₹{platformFee}</span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span>GST & Charges</span>
+            <span>₹{gstAndCharges}</span>
+          </div>
+        </div>
+        
+        <div className="pt-4 border-t border-gray-100 dark:border-gray-800 flex justify-between font-black text-lg text-gray-900 dark:text-white">
+          <span>Grand Total</span>
+          <span>₹{grandTotal}</span>
+        </div>
       </div>
 
       {/* Payment Proof Section */}
