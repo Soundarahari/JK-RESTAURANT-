@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 // The Service Role Key bypasses Row Level Security (RLS) - required for webhooks
 // Server-side uses process.env (not import.meta.env which is Vite client-side only)
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
 
 // Validate environment variables on startup
 if (!supabaseUrl) {
@@ -166,16 +166,33 @@ export default async function handler(req: any, res: any) {
           []
         );
 
-        // 3. THE HYBRID LINK: Send a message to the Delivery Drivers group
-        const appUrl = (process.env.APP_URL || process.env.VERCEL_URL || 'jk-restaurant-dwdp.vercel.app')
-          .replace(/^https?:\/\//, '')
-          .replace(/\/$/, '');
-        
-        const driverLink = `https://${appUrl}/driver/${orderId}`;
+        // 3. Send delivery message directly to the Drivers Telegram group
+        const driverGroupChatId = process.env.TELEGRAM_DRIVER_GROUP_CHAT_ID;
+        console.log('[DRIVER NOTIFY] TELEGRAM_DRIVER_GROUP_CHAT_ID =', driverGroupChatId ?? 'UNDEFINED');
 
-        await sendToDriverGroup(
-          `*🚗 DELIVERY NEEDED!*\n━━━━━━━━━━━━━━━━━━━━\n*Order:* #${orderId.slice(0, 8)}\n\n✅ Food is ready for pickup!\n\n👉 *Tap to start delivery:*\n${driverLink}`
-        );
+        if (!driverGroupChatId) {
+          console.error('[DRIVER NOTIFY] ❌ TELEGRAM_DRIVER_GROUP_CHAT_ID is not set! Cannot notify drivers.');
+        } else {
+          const driverMessage = `🚨 Order #${orderId} is Ready for Pickup!\n\nDriver, click here to start delivery:\nhttps://jk-restaurant-dwdp.vercel.app/driver/${orderId}`;
+
+          console.log('[DRIVER NOTIFY] Sending message to group chat:', driverGroupChatId);
+
+          const driverRes = await fetch(`${TELEGRAM_API}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: driverGroupChatId,
+              text: driverMessage,
+            }),
+          });
+
+          if (driverRes.ok) {
+            console.log('[DRIVER NOTIFY] ✅ Message sent successfully to driver group.');
+          } else {
+            const errBody = await driverRes.text();
+            console.error('[DRIVER NOTIFY] ❌ Telegram API error:', driverRes.status, errBody);
+          }
+        }
 
         await answerCallbackQuery(callbackQueryId, '✅ Driver notified!');
       }
