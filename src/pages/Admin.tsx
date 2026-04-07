@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 
 
 export const Admin = () => {
-  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories, seedDatabase, isLoading } = useStore();
+  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories, seedDatabase, clearOrders, isLoading } = useStore();
   const navigate = useNavigate();
   
   // 1. Admin Authorization check first
@@ -53,6 +53,16 @@ export const Admin = () => {
       alert('Database seeded successfully! Your shop is now ready.');
     } else {
       alert(`Seeding failed: ${error}`);
+    }
+  };
+
+  const handleClearOrders = async () => {
+    if (!window.confirm('WARNING: This will permanently delete ALL order history. This cannot be undone. Proceed?')) return;
+    const { success, error } = await clearOrders();
+    if (success) {
+      alert('Order history cleared successfully.');
+    } else {
+      alert(`Failed to clear orders: ${error}`);
     }
   };
 
@@ -842,6 +852,28 @@ export const Admin = () => {
                 className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-black py-5 rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-brand-500/20 active:scale-[0.97] transition-all flex items-center justify-center gap-2"
               >
                 {isLoading ? 'Processing...' : 'Seed Sample Database'}
+              </button>
+            </div>
+
+            {/* NEW: Clear All Orders */}
+            <div className="p-8 rounded-[2rem] bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 mt-6">
+              <div className="flex items-start gap-5 mb-8">
+                <div className="w-14 h-14 bg-red-500 rounded-2xl flex items-center justify-center shadow-xl shadow-red-500/20 text-white shrink-0">
+                  <X size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-gray-950 dark:text-white uppercase tracking-tight">Clear All Orders</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mt-1 font-medium">
+                    Permanently delete every order from the database. This is used for resetting test environments before going live.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleClearOrders}
+                disabled={isLoading}
+                className="w-full bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-black py-5 rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-red-500/20 active:scale-[0.97] transition-all"
+              >
+                Delete All Order Data
               </button>
             </div>
           </div>

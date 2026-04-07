@@ -116,13 +116,21 @@ interface AppState {
   isLoading: boolean;
   error: string | null;
   seedDatabase: () => Promise<{ success: boolean; error?: string }>;
+  clearOrders: () => Promise<{ success: boolean; error?: string }>;
 }
 
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       user: null,
-      cart: [],
+      cart: (() => {
+        try {
+          const saved = localStorage.getItem('jk_restaurant_cart');
+          return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+          return [];
+        }
+      })(),
       orders: [],
       adminOrders: [],
       customers: [],
@@ -183,6 +191,20 @@ export const useStore = create<AppState>()(
           return { success: true };
         } catch (err: any) {
           console.error('Seeding error:', err);
+          set({ isLoading: false, error: err.message });
+          return { success: false, error: err.message };
+        }
+      },
+      clearOrders: async () => {
+        set({ isLoading: true });
+        try {
+          const { error } = await supabase.from('orders').delete().neq('id', 'placeholder'); // Delete all
+          if (error) throw error;
+          
+          set({ adminOrders: [], orders: [], isLoading: false });
+          return { success: true };
+        } catch (err: any) {
+          console.error('Clear orders error:', err);
           set({ isLoading: false, error: err.message });
           return { success: false, error: err.message };
         }
@@ -267,7 +289,10 @@ export const useStore = create<AppState>()(
             });
         }
       },
-      logoutUser: () => set({ user: null, cart: [], orders: [], adminOrders: [], appliedPromoCode: null }),
+      logoutUser: () => {
+        set({ user: null, cart: [], orders: [], adminOrders: [], appliedPromoCode: null });
+        localStorage.removeItem('jk_restaurant_cart');
+      },
       
       setAppliedPromoCode: (promo) => set({ appliedPromoCode: promo }),
       addPromo: (promo) => set((state) => ({ promos: [...state.promos, { ...promo, id: `promo_${Date.now()}` }] })),
@@ -278,24 +303,33 @@ export const useStore = create<AppState>()(
 
       addToCart: (product) => set((state) => {
         const existingItem = state.cart.find(item => item.id === product.id);
+        let newCart;
         if (existingItem) {
-          return {
-            cart: state.cart.map(item =>
-              item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-            )
-          };
+          newCart = state.cart.map(item =>
+            item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          );
+        } else {
+          newCart = [...state.cart, { ...product, quantity: 1 }];
         }
-        return { cart: [...state.cart, { ...product, quantity: 1 }] };
+        localStorage.setItem('jk_restaurant_cart', JSON.stringify(newCart));
+        return { cart: newCart };
       }),
-      removeFromCart: (productId) => set((state) => ({
-        cart: state.cart.filter(item => item.id !== productId)
-      })),
-      updateQuantity: (productId, quantity) => set((state) => ({
-        cart: state.cart.map(item =>
+      removeFromCart: (productId) => set((state) => {
+        const newCart = state.cart.filter(item => item.id !== productId);
+        localStorage.setItem('jk_restaurant_cart', JSON.stringify(newCart));
+        return { cart: newCart };
+      }),
+      updateQuantity: (productId, quantity) => set((state) => {
+        const newCart = state.cart.map(item =>
           item.id === productId ? { ...item, quantity: Math.max(1, quantity) } : item
-        )
-      })),
-      clearCart: () => set({ cart: [] }),
+        );
+        localStorage.setItem('jk_restaurant_cart', JSON.stringify(newCart));
+        return { cart: newCart };
+      }),
+      clearCart: () => {
+        set({ cart: [] });
+        localStorage.removeItem('jk_restaurant_cart');
+      },
       products: [],
       fetchProducts: async () => {
         set({ isLoading: true, error: null });
@@ -438,6 +472,7 @@ export const useStore = create<AppState>()(
             orders: [data[0] as Order, ...state.orders],
             cart: [] 
           }));
+          localStorage.removeItem('jk_restaurant_cart');
           return { success: true };
         } catch (error: any) {
           console.error('Error in placeOrder:', error);

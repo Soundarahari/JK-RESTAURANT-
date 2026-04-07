@@ -15,7 +15,6 @@ export const Checkout = () => {
   const [paymentScreenshot, setPaymentScreenshot] = useState<string | null>(null);
   const [isUploadingScreenshot, setIsUploadingScreenshot] = useState(false);
   const [utrNumber, setUtrNumber] = useState('');
-  const [orderComplete, setOrderComplete] = useState(false);
   const [cookingInstructions, setCookingInstructions] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [promoInput, setPromoInput] = useState('');
@@ -114,8 +113,8 @@ export const Checkout = () => {
       const { success, error } = await useStore.getState().placeOrder(paymentScreenshot, utrNumber, userLocation || undefined);
       
       if (success) {
-        setOrderComplete(true);
         useStore.getState().clearCart();
+        navigate('/profile');
       } else {
         alert(`Order Failed: ${error || 'Please try again later'}`);
       }
@@ -131,27 +130,6 @@ export const Checkout = () => {
     ? (paymentScreenshot !== null && utrNumber.length >= 6)
     : (distance !== null && !isTooFar && paymentScreenshot !== null && utrNumber.length >= 6);
 
-  if (orderComplete) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[70vh] text-center animate-fade-in px-6">
-        <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
-          <CheckCircle2 size={40} className="text-green-600 dark:text-green-400" />
-        </div>
-        <h2 className="text-2xl font-black text-gray-900 dark:text-white">Order Placed Successfully!</h2>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-3 leading-relaxed">
-          {isTakeaway 
-            ? 'Head to the counter to collect your order. Show your order ID to the staff.' 
-            : 'Your food is being prepared and will be delivered soon. Stay close to your phone!'}
-        </p>
-        <button 
-          onClick={() => navigate('/profile')}
-          className="mt-8 bg-brand-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg active:scale-95 transition-all"
-        >
-          Track My Order
-        </button>
-      </div>
-    );
-  }
 
   // Effect to redirect if cart is empty on mount
   useEffect(() => {
