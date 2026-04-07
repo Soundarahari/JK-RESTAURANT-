@@ -36,6 +36,13 @@ export const TrackOrder = () => {
   const [hasRealGPS, setHasRealGPS] = useState(false);
   const [orderStatus, setOrderStatus] = useState<string>(order?.status || 'pending');
   
+  // Keep orderStatus reactive to internal order changes
+  useEffect(() => {
+    if (order?.status) {
+      setOrderStatus(order.status);
+    }
+  }, [order?.status]);
+  
   // Simulated progress for fallback (when no real GPS)
   const [simProgressPercent, setSimProgressPercent] = useState(0);
 
@@ -88,7 +95,10 @@ export const TrackOrder = () => {
           
           // Update order status
           if (newData.status) {
+            console.log('Realtime Status Update:', newData.status);
             setOrderStatus(newData.status);
+            // Also update localOrder to keep everything in sync
+            setLocalOrder((prev: any) => prev ? { ...prev, status: newData.status } : newData);
           }
         }
       )

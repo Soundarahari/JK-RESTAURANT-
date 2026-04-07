@@ -150,12 +150,14 @@ export default async function handler(req: any, res: any) {
         );
 
         // 3. THE HYBRID LINK: Send a message to the Delivery Drivers group
-        const appUrl = process.env.APP_URL 
-          ? `https://${process.env.APP_URL.replace(/^https?:\/\//, '')}` 
-          : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://jk-restaurant-dwdp.vercel.app');
+        const appUrl = (process.env.APP_URL || process.env.VERCEL_URL || 'jk-restaurant-dwdp.vercel.app')
+          .replace(/^https?:\/\//, '')
+          .replace(/\/$/, '');
+        
+        const driverLink = `https://${appUrl}/driver/${orderId}`;
 
         await sendToDriverGroup(
-          `*🚗 DELIVERY NEEDED!*\n━━━━━━━━━━━━━━━━━━━━\n*Order:* #${orderId.slice(0, 8)}\n\n✅ Food is ready for pickup!\n\n👉 *Tap to start delivery:*\n${appUrl}/driver/${orderId}`
+          `*🚗 DELIVERY NEEDED!*\n━━━━━━━━━━━━━━━━━━━━\n*Order:* #${orderId.slice(0, 8)}\n\n✅ Food is ready for pickup!\n\n👉 *Tap to start delivery:*\n${driverLink}`
         );
 
         await answerCallbackQuery(callbackQueryId, '✅ Driver notified!');
