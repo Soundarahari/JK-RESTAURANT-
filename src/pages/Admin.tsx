@@ -262,6 +262,8 @@ export const Admin = () => {
     switch (status) {
       case 'pending': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
       case 'preparing': return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'ready': return 'text-green-600 bg-green-50 border-green-200';
+      case 'out_for_delivery': return 'text-purple-600 bg-purple-50 border-purple-200';
       case 'completed': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
       default: return 'text-gray-600 bg-gray-50 border-gray-200';
     }
@@ -389,10 +391,18 @@ export const Admin = () => {
                   )}
                   {order.status === 'preparing' && (
                     <button
-                      onClick={() => updateOrderStatus(order.id, order.order_mode === 'delivery' ? 'out_for_delivery' : 'completed')}
-                      className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-2.5 rounded-xl text-[11px] uppercase tracking-widest shadow-md transition-all active:scale-95"
+                      onClick={() => updateOrderStatus(order.id, order.order_mode === 'delivery' ? 'ready' : 'completed')}
+                      className="flex-1 bg-green-500 hover:bg-green-600 text-white font-black py-2.5 rounded-xl text-[11px] uppercase tracking-widest shadow-md transition-all active:scale-95"
                     >
-                      {order.order_mode === 'delivery' ? 'Out for Delivery' : 'Mark Completed'}
+                      {order.order_mode === 'delivery' ? '✅ Food Ready' : 'Mark Completed'}
+                    </button>
+                  )}
+                  {order.status === 'ready' && (
+                    <button
+                      onClick={() => updateOrderStatus(order.id, 'out_for_delivery')}
+                      className="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-black py-2.5 rounded-xl text-[11px] uppercase tracking-widest shadow-md transition-all active:scale-95"
+                    >
+                      🚗 Send to Driver
                     </button>
                   )}
                   {order.status === 'out_for_delivery' && (

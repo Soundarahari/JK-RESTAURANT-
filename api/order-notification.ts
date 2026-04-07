@@ -127,7 +127,8 @@ export default async function handler(req: any, res: any) {
         });
         telegramMessage += `━━━━━━━━━━━━━━━━━━━━\n`;
         telegramMessage += `*💰 Total Amount:* ₹${Number(totalAmount).toFixed(2)}\n`;
-        telegramMessage += `━━━━━━━━━━━━━━━━━━━━`;
+        telegramMessage += `━━━━━━━━━━━━━━━━━━━━\n`;
+        telegramMessage += `*Status:* 🔴 Received`;
 
         const telegramRes = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
@@ -137,7 +138,12 @@ export default async function handler(req: any, res: any) {
           body: JSON.stringify({
             chat_id: process.env.TELEGRAM_CHAT_ID,
             text: telegramMessage,
-            parse_mode: 'Markdown'
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '👨‍🍳 Start Preparing', callback_data: `prepare_${orderId}` }]
+              ]
+            }
           }),
         });
         

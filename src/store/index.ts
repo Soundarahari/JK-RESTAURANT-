@@ -17,7 +17,7 @@ export interface Order {
   items: CartItem[];
   total_amount: number;
   order_mode: 'delivery' | 'takeaway';
-  status: 'pending' | 'preparing' | 'completed' | 'cancelled' | 'out_for_delivery';
+  status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'out_for_delivery';
   payment_screenshot_url: string | null;
   utr_number: string | null;
   created_at: string;
