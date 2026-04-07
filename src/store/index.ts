@@ -391,19 +391,32 @@ export const useStore = create<AppState>()(
         }
       },
       updateOrderStatus: async (orderId, status) => {
+        // Save previous state for rollback
+        const prevOrders = get().orders;
+        const prevAdminOrders = get().adminOrders;
+
         // Optimistic update for both lists
         set((state) => ({
           orders: state.orders.map(o => o.id === orderId ? { ...o, status } : o),
           adminOrders: state.adminOrders.map(o => o.id === orderId ? { ...o, status } : o)
         }));
 
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('orders')
           .update({ status })
-          .eq('id', orderId);
+          .eq('id', orderId)
+          .select();
 
         if (error) {
-          console.error('Error updating status:', error);
+          console.error('Error updating order status:', error);
+          // Rollback optimistic update
+          set({ orders: prevOrders, adminOrders: prevAdminOrders });
+          alert(`Failed to update order: ${error.message}`);
+        } else if (!data || data.length === 0) {
+          console.error('Order update returned 0 rows — likely an RLS policy issue.');
+          // Rollback optimistic update
+          set({ orders: prevOrders, adminOrders: prevAdminOrders });
+          alert('Order status update failed. Your Supabase "orders" table likely needs an UPDATE policy for authenticated users. Go to Supabase → Authentication → Policies → orders table → Add policy: allow UPDATE for authenticated role.');
         }
       },
       getTotalPrice: () => {

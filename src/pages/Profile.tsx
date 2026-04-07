@@ -74,15 +74,17 @@ export const Profile = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     logoutUser();
+    // Clear saved route so RouteTracker doesn't redirect back to /profile
+    localStorage.removeItem('jk-last-route');
+    // Force reload to the homepage for a clean state
+    window.location.href = '/';
   };
 
   const isVerified = user?.is_student;
   const needsPhone = user && !user.phone;
 
-  // ==========================================
-  // NOT LOGGED IN — Show Google Login Screen
-  // ==========================================
   const [promoInput, setPromoInput] = useState('');
+  const [activeTab, setActiveTab] = useState<'orders' | 'status' | 'account'>('orders');
 
   const handleApplyPromo = () => {
     const promo = promos.find(p => p.code.toUpperCase() === promoInput.toUpperCase() && p.is_active);
@@ -94,6 +96,9 @@ export const Profile = () => {
     setPromoInput('');
   };
 
+  // ==========================================
+  // NOT LOGGED IN — Show Google Login Screen
+  // ==========================================
   if (!user) {
     return (
       <div className="pb-24 flex flex-col items-center justify-center min-h-[60vh] px-4">
@@ -207,7 +212,6 @@ export const Profile = () => {
   // ==========================================
   // FULLY LOGGED IN — Show Profile
   // ==========================================
-  const [activeTab, setActiveTab] = useState<'orders' | 'status' | 'account'>('orders');
 
   return (
     <div className="pb-24">
