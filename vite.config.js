@@ -5,13 +5,13 @@ export default defineConfig({
     plugins: [
         react(),
         VitePWA({
-            registerType: 'autoUpdate',
+            registerType: 'prompt',
             includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
             manifest: {
                 name: 'JK Restaurant',
-                short_name: 'JKRestaurant',
+                short_name: 'JK Rest',
                 description: 'PureVeg Campus & Beyond Food Delivery',
-                theme_color: '#22c55e',
+                theme_color: '#ffffff',
                 background_color: '#ffffff',
                 display: 'standalone',
                 icons: [
@@ -24,8 +24,22 @@ export default defineConfig({
                         src: 'pwa-512x512.png',
                         sizes: '512x512',
                         type: 'image/png'
+                    },
+                    {
+                        src: 'pwa-512x512.png',
+                        sizes: '512x512',
+                        type: 'image/png',
+                        purpose: 'any maskable'
                     }
                 ]
+            },
+            workbox: {
+                globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+                cleanupOutdatedCaches: true,
+                clientsClaim: true,
+            },
+            devOptions: {
+                enabled: true,
             }
         })
     ]

@@ -8,14 +8,6 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        cleanupOutdatedCaches: true,
-        clientsClaim: true,
-      },
-      devOptions: {
-        enabled: false, // Enable if you want to test in dev mode
-      },
       manifest: {
         name: 'JK Restaurant',
         short_name: 'JK Rest',
@@ -25,11 +17,30 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: 'favicon.ico',
-            sizes: '64x64 32x32 24x24 16x16',
-            type: 'image/x-icon'
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+      },
+      devOptions: {
+        enabled: true,
       }
     })
   ]

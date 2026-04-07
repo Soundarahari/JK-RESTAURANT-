@@ -113,7 +113,7 @@ export function PwaBadge() {
             onClick={handleInstallClick}
             className="px-4 py-2 bg-brand-500 text-white rounded-lg font-bold text-sm hover:bg-brand-600 transition-colors flex-shrink-0"
           >
-            Install
+            Install App
           </button>
           <button
             onClick={closeInstall}
