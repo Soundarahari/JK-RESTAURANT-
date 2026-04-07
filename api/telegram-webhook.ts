@@ -1,9 +1,27 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client for server-side usage
-const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Server-side uses process.env (not import.meta.env which is Vite client-side only)
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+// Validate environment variables on startup
+if (!supabaseUrl) {
+  console.error('❌ CRITICAL: Missing SUPABASE_URL environment variable. Set VITE_SUPABASE_URL or SUPABASE_URL.');
+}
+if (!supabaseKey) {
+  console.error('❌ CRITICAL: Missing SUPABASE_KEY environment variable. Set SUPABASE_SERVICE_ROLE_KEY, VITE_SUPABASE_ANON_KEY, or SUPABASE_ANON_KEY.');
+}
+
+let supabase: SupabaseClient;
+try {
+  supabase = createClient(supabaseUrl, supabaseKey);
+  console.log('✅ Supabase client initialized successfully');
+} catch (error) {
+  console.error('❌ Failed to initialize Supabase client:', error);
+  // Create a dummy client that will fail gracefully
+  supabase = createClient('https://placeholder.supabase.co', 'placeholder-key');
+}
 
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 
