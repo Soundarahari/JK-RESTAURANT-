@@ -110,15 +110,21 @@ export const Checkout = () => {
     }
     
     setIsPlacingOrder(true);
-    const { success, error } = await useStore.getState().placeOrder(paymentScreenshot, utrNumber, userLocation || undefined);
-    
-    if (success) {
-      setOrderComplete(true);
-      useStore.getState().clearCart();
-    } else {
-      alert(`Order Failed: ${error || 'Please try again later'}`);
+    try {
+      const { success, error } = await useStore.getState().placeOrder(paymentScreenshot, utrNumber, userLocation || undefined);
+      
+      if (success) {
+        setOrderComplete(true);
+        useStore.getState().clearCart();
+      } else {
+        alert(`Order Failed: ${error || 'Please try again later'}`);
+      }
+    } catch (err: any) {
+      console.error('Checkout error:', err);
+      alert(`Order Failed: ${err.message || 'Network error'}`);
+    } finally {
+      setIsPlacingOrder(false);
     }
-    setIsPlacingOrder(false);
   };
 
   const canPlaceOrder = isTakeaway

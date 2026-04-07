@@ -309,39 +309,43 @@ export const useStore = create<AppState>()(
         }
       },
       placeOrder: async (paymentScreenshot, utrNumber, delivery_location) => {
-        const { user, cart, orderMode, getTotalPrice, lastOrderTime } = get();
-        if (!user || cart.length === 0) return { success: false, error: 'No user or empty cart' };
+        try {
+          const { user, cart, orderMode, getTotalPrice, lastOrderTime } = get();
+          if (!user || cart.length === 0) return { success: false, error: 'No user or empty cart' };
 
-        // Rate limiting: prevent orders within 30 seconds of each other
-        const now = Date.now();
-        if (now - lastOrderTime < 30000) {
-          return { success: false, error: 'Please wait 30 seconds before placing another order.' };
-        }
+          // Rate limiting
+          const now = Date.now();
+          if (now - lastOrderTime < 30000) {
+            return { success: false, error: 'Please wait 30 seconds before placing another order.' };
+          }
 
-        const newOrder = {
-          user_id: user.id || `u_${Date.now()}`,
-          user_name: user.full_name,
-          user_email: user.email,
-          user_phone: user.phone,
-          items: cart,
-          total_amount: getTotalPrice(),
-          order_mode: orderMode,
-          status: 'pending',
-          payment_screenshot_url: paymentScreenshot || null,
-          utr_number: utrNumber || null,
-          delivery_location: delivery_location || null,
-        };
+          const newOrder = {
+            user_id: user.id || `u_${Date.now()}`,
+            user_name: user.full_name,
+            user_email: user.email,
+            user_phone: user.phone,
+            items: cart,
+            total_amount: getTotalPrice(),
+            order_mode: orderMode,
+            status: 'pending',
+            payment_screenshot_url: paymentScreenshot || null,
+            utr_number: utrNumber || null,
+            delivery_location: delivery_location || null,
+          };
 
-        const { data, error } = await supabase.from('orders').insert([newOrder]).select();
-        
-        if (!error && data) {
+          const { data, error } = await supabase.from('orders').insert([newOrder]).select();
+          
+          if (error) throw error;
+          if (!data || data.length === 0) throw new Error('Order was not created correctly.');
+
           set({ lastOrderTime: now });
 
-          // 1. Send Email Notification to Customer via Vercel API
+          // 1. Send Email/Telegram Notification via Vercel API
           try {
             const apiSecret = import.meta.env.VITE_ORDER_NOTIFICATION_SECRET || 'test-secret-key';
-            // In production, use relative path to hit Vercel Serverless Function. Locally, point to the dev server.
-            const apiUrl = import.meta.env.PROD ? '/api/order-notification' : 'http://localhost:3000/api/order-notification';
+            const apiUrl = import.meta.env.PROD 
+              ? `${window.location.origin}/api/order-notification` 
+              : 'http://localhost:3000/api/order-notification';
             
             fetch(apiUrl, {
               method: 'POST',
@@ -359,9 +363,9 @@ export const useStore = create<AppState>()(
                   phone: newOrder.user_phone
                 }
               })
-            }).catch(err => console.warn('Silently failed to trigger email notification API:', err));
+            }).catch(err => console.warn('Notification API warning:', err));
           } catch (e) {
-            console.error('Email API call error:', e);
+            console.error('Notification API trigger error:', e);
           }
 
           // 2. Trigger Admin Notification (via Edge Function)
@@ -369,14 +373,14 @@ export const useStore = create<AppState>()(
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
           if (notifyPhone && supabaseUrl) {
             try {
-              await fetch(`${supabaseUrl}/functions/v1/send-otp`, {
+              fetch(`${supabaseUrl}/functions/v1/send-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                   phone: notifyPhone,
                   otp: `🚨 NEW ORDER FROM ${user.full_name.toUpperCase()}! Total: ₹${newOrder.total_amount}. Check Admin Panel.` 
                 })
-              });
+              }).catch(err => console.warn('Edge function warning:', err));
             } catch (e) { console.error("Notification failed:", e); }
           }
 
@@ -385,9 +389,9 @@ export const useStore = create<AppState>()(
             cart: [] 
           }));
           return { success: true };
-        } else {
-          console.error('Error placing order:', error);
-          return { success: false, error: error?.message };
+        } catch (error: any) {
+          console.error('Error in placeOrder:', error);
+          return { success: false, error: error.message || 'Network or Server Error' };
         }
       },
       updateOrderStatus: async (orderId, status) => {
