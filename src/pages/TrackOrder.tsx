@@ -68,7 +68,12 @@ export const TrackOrder = () => {
       }
     };
     
-    fetchFullOrder();
+    // Poll as fallback every 5 seconds if not completed
+    const pollInterval = setInterval(() => {
+      if (orderStatus !== 'completed' && orderStatus !== 'cancelled') {
+        fetchFullOrder();
+      }
+    }, 5000);
 
     // Subscribe to realtime updates
     const channel = supabase
@@ -83,6 +88,7 @@ export const TrackOrder = () => {
         },
         (payload: any) => {
           const newData = payload.new;
+          console.log('🔔 Realtime Update Received:', newData.status);
           
           // Update driver position from real GPS
           if (newData.driver_location?.lat && newData.driver_location?.lng) {
@@ -95,19 +101,21 @@ export const TrackOrder = () => {
           
           // Update order status
           if (newData.status) {
-            console.log('Realtime Status Update:', newData.status);
             setOrderStatus(newData.status);
             // Also update localOrder to keep everything in sync
             setLocalOrder((prev: any) => prev ? { ...prev, status: newData.status } : newData);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Subscription Status:', status);
+      });
 
     return () => {
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
-  }, [orderId]);
+  }, [orderId, orderStatus]);
 
   // Fallback simulation if no real GPS data (simulates movement from restaurant to user)
   useEffect(() => {
