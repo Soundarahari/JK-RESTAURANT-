@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ProductCard } from '../components/ProductCard';
-import { ArrowUp, Star, Flame, Utensils, Popcorn, Truck, GlassWater, Plus, Minus, ChevronRight, ChevronLeft, Mic, ShoppingBag } from 'lucide-react';
+import { Search, ArrowUp, Star, Clock, MapPin, Flame, Utensils, Popcorn, Truck, GlassWater, Plus, Minus, ChevronRight, RefreshCw } from 'lucide-react';
 import { useStore } from '../store';
 import { Product } from '../data/mock';
 
@@ -32,7 +32,7 @@ const BestsellerCard = ({ product }: { product: Product }) => {
             <Star size={8} fill="currentColor" /> BESTSELLER
           </div>
           <div className="bg-white/90 backdrop-blur-sm text-gray-900 text-[9px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm self-start">
-            <Star size={8} className="text-gray-400" /> {product.prep_time || 15} MIN
+            <Clock size={8} className="text-gray-500" /> {product.prep_time || 15} MIN
           </div>
         </div>
         <div className="absolute bottom-2.5 left-2.5">
@@ -86,13 +86,7 @@ const BestsellerCard = ({ product }: { product: Product }) => {
 
 /* ══════════════════════════════════════════ */
 export const Home = () => {
-  const products = useStore(state => state.products);
-  const fetchProducts = useStore(state => state.fetchProducts);
-  const cart = useStore(state => state.cart);
-  const user = useStore(state => state.user);
-  const categories = useStore(state => state.categories);
-  const fetchCategories = useStore(state => state.fetchCategories);
-  const isLoading = useStore(state => state.isLoading);
+  const { products, fetchProducts, cart, user, categories, fetchCategories, isLoading, error } = useStore();
   const navigate = useNavigate();
 
   useEffect(() => { 
@@ -150,146 +144,200 @@ export const Home = () => {
     );
   }, [products, searchQuery]);
 
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    return h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+  }, []);
+
   const isSearching = searchQuery.length > 0;
 
   if (isLoading && products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in duration-500">
         <div className="w-12 h-12 border-4 border-brand-500/10 border-t-brand-500 rounded-full animate-spin mb-6 shadow-sm"></div>
-        <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Loading Menu...</p>
+        <div className="space-y-1 text-center">
+          <p className="text-gray-900 dark:text-white font-black text-xs uppercase tracking-[0.2em]">Loading Menu</p>
+          <p className="text-gray-400 dark:text-gray-500 text-[10px] font-bold uppercase tracking-widest">Preparing deliciousness...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isLoading && products.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-8 text-center animate-in zoom-in-95 duration-500">
+        <div className="w-24 h-24 bg-gray-50 dark:bg-gray-800/50 rounded-[2rem] flex items-center justify-center mb-8 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden">
+           <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent opacity-50"></div>
+           <span className="text-5xl grayscale opacity-40 group-hover:grayscale-0 transition-all duration-700">🍛</span>
+        </div>
+        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-3 uppercase tracking-tight">The Menu is Empty</h2>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mb-10 leading-relaxed font-medium max-w-xs">
+          {error ? `Connection Error: ${error}` : "Our chefs are currently updating the database with today's specials. Please check back in a moment or visit Admin to seed sample data."}
+        </p>
+        <div className="flex flex-col w-full max-w-xs gap-3">
+          <button 
+            onClick={() => { fetchProducts(); fetchCategories(); }}
+            className="w-full bg-brand-500 text-white font-black py-4.5 rounded-2xl text-[11px] uppercase tracking-widest shadow-xl shadow-brand-500/20 active:scale-[0.97] transition-all flex items-center justify-center gap-2"
+          >
+            <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+            Try Refreshing
+          </button>
+          <div className="h-px bg-gray-100 dark:bg-gray-800/50 my-2"></div>
+          <button 
+            onClick={() => navigate('/admin')}
+            className="w-full bg-white dark:bg-gray-900 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-700 font-black py-4.5 rounded-2xl text-[11px] uppercase tracking-widest active:scale-[0.97] transition-all shadow-sm"
+          >
+            Go to Admin Panel
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-950 animate-in fade-in duration-700 pb-20">
+    <div className="flex flex-col h-full animate-in fade-in duration-700">
 
-      {/* ═══ Header / Search Bar ═══ */}
-      <div className="sticky top-0 z-50 bg-white/95 dark:bg-gray-950/95 backdrop-blur-md px-4 py-3 -mx-4 lg:-mx-10 border-b border-gray-100 dark:border-gray-800 shadow-sm">
-        <div className="relative flex items-center gap-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-full py-2.5 pl-4 pr-12 shadow-sm focus-within:shadow-md transition-all duration-300">
-          <ChevronLeft size={22} className="text-red-500 cursor-pointer" onClick={() => navigate(-1)} />
-          <input
-            type="text"
-            placeholder="Restaurant name or a dish..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent border-0 text-gray-800 dark:text-gray-100 outline-none text-[15px] font-medium placeholder:text-gray-400 placeholder:font-normal"
-          />
-          <div className="absolute right-4 flex items-center">
-             <Mic size={20} className="text-red-500 cursor-pointer" />
+      {/* ═══ Hero Banner ═══ */}
+      <div className="relative -mx-4 lg:-mx-10 -mt-4 lg:-mt-8 mb-6 overflow-hidden">
+        <div className="bg-gradient-to-br from-brand-600 via-brand-500 to-emerald-500 px-5 lg:px-10 py-6 lg:py-10">
+          <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">{greeting} 👋</p>
+          <h1 className="text-white text-2xl lg:text-3xl font-black tracking-tight">JK Restaurant 🍽️</h1>
+          <p className="text-white/60 text-xs mt-1 font-medium">Highway &amp; Student-Friendly Pricing</p>
+
+          {/* Quick stats */}
+          <div className="flex flex-wrap items-center gap-2.5 mt-3">
+            <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <Clock size={12} className="text-white/80" /><span className="text-white/90 text-[10px] font-bold">20-30 min</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <MapPin size={12} className="text-white/80" /><span className="text-white/90 text-[10px] font-bold">5km delivery</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-emerald-400/30 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+              <span className="text-emerald-100 text-[10px] font-bold">Open Now</span>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="relative mt-5">
+            <input type="text" placeholder="Search 'Paneer', 'Noodles', 'Falooda'..."
+              value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white/95 dark:bg-gray-900/95 border-0 text-gray-900 dark:text-gray-100 rounded-2xl py-3.5 pl-11 pr-4 outline-none shadow-lg text-sm font-medium placeholder:text-gray-400"
+            />
+            <Search size={16} className="absolute left-4 top-4 text-gray-400" />
           </div>
         </div>
+        <div className="absolute -bottom-1 left-0 right-0 h-5 bg-gray-50 dark:bg-gray-950 rounded-t-[24px]"></div>
       </div>
 
-      <div className="pt-4 pb-6 px-1">
-        {isSearching ? (
-          /* ═══ Search Results ═══ */
-          <div className="pb-6">
-            <h2 className="text-lg font-black text-gray-800 dark:text-white mb-4">
-              Results for "<span className="text-brand-500">{searchQuery}</span>"
+      {isSearching ? (
+        /* ═══ Search Results ═══ */
+        <div className="pb-6">
+          <h2 className="text-lg font-black text-gray-800 dark:text-white mb-4">
+            Results for "<span className="text-brand-500">{searchQuery}</span>"
+          </h2>
+          {searchResults.length === 0 ? (
+            <div className="text-center py-16 animate-fade-in">
+              <div className="text-5xl mb-3">🔍</div>
+              <p className="text-gray-500 dark:text-gray-400 font-semibold text-sm">No dishes found</p>
+              <button onClick={() => setSearchQuery('')} className="mt-4 bg-brand-500 text-white font-bold text-xs uppercase px-6 py-2.5 rounded-full shadow-md">Clear Search</button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children">
+              {searchResults.map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ═══ Default Home ═══ */
+        <>
+          {/* ─── What's on your mind? ─── */}
+          <section className="mb-8">
+            <h2 className="text-[15px] lg:text-lg font-black text-gray-800 dark:text-white mb-4 uppercase tracking-wide">
+              What's on your mind?
             </h2>
-            {searchResults.length === 0 ? (
-              <div className="text-center py-16 animate-fade-in">
-                <p className="text-gray-500 dark:text-gray-400 font-semibold text-sm">No dishes found</p>
-                <button onClick={() => setSearchQuery('')} className="mt-4 bg-red-500 text-white font-bold text-xs uppercase px-6 py-2.5 rounded-full shadow-md">Clear Search</button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children">
-                {searchResults.map(p => <ProductCard key={p.id} product={p} />)}
-              </div>
-            )}
-          </div>
-        ) : (
-          /* ═══ Default Home ═══ */
-          <>
-            {/* ─── WHAT'S ON YOUR MIND? ─── */}
-            <section className="mb-10">
-              <h2 className="text-[14px] font-extrabold text-[#5A6D8D] dark:text-gray-400 mb-6 uppercase tracking-[0.08em] px-1">
-                What's on your mind?
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-2 gap-y-5">
+              {displayCategories.map((sc, i) => (
+                <Link key={sc.name} to={`/category/${encodeURIComponent(sc.name)}`}
+                  className="flex flex-col items-center group animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
+                  <div className="w-[76px] h-[76px] lg:w-24 lg:h-24 rounded-full overflow-hidden border-[3px] border-white dark:border-gray-800 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110 group-active:scale-95 bg-gray-100 dark:bg-gray-800 ring-2 ring-gray-100 dark:ring-gray-700">
+                    <img src={sc.image} alt={sc.name} className="w-full h-full object-cover" loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200'; }}
+                    />
+                  </div>
+                  <span className="text-[11px] lg:text-xs font-bold text-gray-600 dark:text-gray-300 mt-2 text-center leading-tight max-w-[80px]" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {sc.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          {/* ─── Bestsellers Carousel ─── */}
+          {bestsellers.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-[15px] lg:text-lg font-black text-gray-800 dark:text-white mb-4 flex items-center gap-2 uppercase tracking-wide">
+                <Star size={16} className="text-amber-400" fill="currentColor" /> Bestsellers
               </h2>
-              <div className="grid grid-cols-3 gap-x-4 gap-y-10 lg:grid-cols-6 stagger-children">
-                {displayCategories.map((sc, i) => (
-                  <Link
-                    key={sc.name}
-                    to={`/category/${encodeURIComponent(sc.name)}`}
-                    className="flex flex-col items-center group animate-fade-in"
-                    style={{ animationDelay: `${i * 30}ms` }}
-                  >
-                    <div className="relative w-full aspect-square mb-2.5 px-1">
-                       <img
-                        src={sc.image}
-                        alt={sc.name}
-                        className="w-full h-full object-contain filter drop-shadow-md group-hover:scale-110 transition-transform duration-500"
-                        loading="lazy"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200";
-                        }}
-                      />
+              <div className="flex overflow-x-auto hide-scrollbar gap-4 -mx-4 px-4 lg:mx-0 lg:px-0 snap-x snap-mandatory pb-2">
+                {bestsellers.map(p => <BestsellerCard key={p.id} product={p} />)}
+              </div>
+            </section>
+          )}
+
+          {/* ─── Browse by Category ─── */}
+          <section className="mb-8 pb-4">
+            <h2 className="text-[15px] lg:text-lg font-black text-gray-800 dark:text-white mb-4 uppercase tracking-wide">
+              Explore Menu
+            </h2>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+              {mainCategories.map((cat, i) => {
+                const Icon = CATEGORY_ICONS[cat.name] || Utensils;
+                const grad = CATEGORY_GRADIENTS[cat.name] || 'from-gray-500 to-gray-600';
+                return (
+                  <Link key={cat.name} to={`/category/${encodeURIComponent(cat.name)}`}
+                    className={`group relative overflow-hidden rounded-2xl p-4 lg:p-5 bg-gradient-to-br ${grad} shadow-lg hover:shadow-xl transition-all active:scale-[0.97] animate-fade-in`}
+                    style={{ animationDelay: `${i * 60}ms` }}>
+                    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+                    <div className="absolute right-2 top-2 w-10 h-10 bg-white/10 rounded-full"></div>
+                    <Icon size={28} className="text-white/90 mb-3" />
+                    <h3 className="text-white font-black text-base leading-tight">{cat.name}</h3>
+                    <p className="text-white/70 text-[10px] font-semibold mt-0.5">{cat.count} items</p>
+                    <div className="flex items-center gap-1 mt-3 text-white/60 group-hover:text-white/90 transition-colors">
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Explore</span>
+                      <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
                     </div>
-                    <span className="text-[12px] lg:text-[13px] font-black text-[#3D4B68] dark:text-gray-300 text-center leading-tight uppercase transition-colors group-hover:text-red-500 px-1">
-                      {sc.name}
-                    </span>
                   </Link>
-                ))}
-              </div>
-            </section>
-
-            {/* ─── Bestsellers ─── */}
-            {bestsellers.length > 0 && (
-              <section className="mb-10">
-                <h2 className="text-[14px] font-black text-[#5A6D8D] dark:text-gray-400 mb-6 uppercase tracking-wider px-1">
-                   Bestsellers
-                </h2>
-                <div className="flex overflow-x-auto hide-scrollbar gap-4 -mx-4 px-4 lg:mx-0 lg:px-0 snap-x snap-mandatory pb-2">
-                  {bestsellers.map(p => <BestsellerCard key={p.id} product={p} />)}
-                </div>
-              </section>
-            )}
-
-            {/* ─── Explore Menu ─── */}
-            <section className="mb-8 pb-4">
-              <h2 className="text-[14px] font-black text-[#5A6D8D] dark:text-gray-400 mb-6 uppercase tracking-wider px-1">
-                Explore Menu
-              </h2>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                {mainCategories.map((cat, i) => {
-                  const Icon = CATEGORY_ICONS[cat.name] || Utensils;
-                  const grad = CATEGORY_GRADIENTS[cat.name] || 'from-gray-500 to-gray-600';
-                  return (
-                    <Link key={cat.name} to={`/category/${encodeURIComponent(cat.name)}`}
-                      className={`group relative overflow-hidden rounded-2xl p-4 lg:p-5 bg-gradient-to-br ${grad} shadow-lg hover:shadow-xl transition-all active:scale-[0.97] animate-fade-in`}
-                      style={{ animationDelay: `${i * 60}ms` }}>
-                      <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
-                      <Icon size={28} className="text-white/90 mb-3" />
-                      <h3 className="text-white font-black text-base leading-tight">{cat.name}</h3>
-                      <p className="text-white/70 text-[10px] font-semibold mt-0.5">{cat.count} items</p>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          </>
-        )}
-      </div>
+                );
+              })}
+            </div>
+          </section>
+        </>
+      )}
 
       {/* ═══ Floating Cart Bar ═══ */}
       {cart.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 px-4 pb-6 pt-3 z-[60] animate-in slide-in-from-bottom-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-t border-gray-100 dark:border-gray-800">
+        <div className="fixed bottom-[72px] lg:bottom-4 left-0 lg:left-64 right-0 px-4 pb-3 lg:pb-0 z-40 animate-in slide-in-from-bottom duration-500">
           <button 
-            onClick={() => navigate('/cart')}
-            className="w-full max-w-lg mx-auto bg-red-500 text-white rounded-2xl py-4 px-5 flex items-center justify-between shadow-2xl shadow-red-500/30 transition-all active:scale-[0.98]"
+            onClick={() => { if (!user) navigate('/profile?redirect=/cart'); else if (!user.phone) navigate('/profile'); else navigate('/cart'); }}
+            className="w-full max-w-md mx-auto bg-red-500 hover:bg-red-600 text-white rounded-2xl py-4 px-5 flex items-center justify-between shadow-[0_8px_30px_rgb(239,68,68,0.3)] transition-all active:scale-[0.98]"
           >
             <div className="flex items-center gap-3">
-               <ShoppingBag size={22} className="text-white" />
-               <div className="flex flex-col items-start leading-none">
-                  <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">{cartCount} {cartCount === 1 ? 'item' : 'items'} added</span>
-                  <span className="text-sm font-black uppercase tracking-tight italic">View cart</span>
-               </div>
+              <div className="relative">
+                <img 
+                  src={cart[cart.length - 1]?.image_url} 
+                  className="w-10 h-10 rounded-lg object-cover border-2 border-white/20 shadow-inner"
+                  alt=""
+                />
+                <div className="absolute -top-2 -right-2 bg-white text-red-500 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shadow-md border border-red-100">
+                  {cartCount}
+                </div>
+              </div>
+              <span className="font-black text-sm tracking-tight">{cartCount} {cartCount === 1 ? 'item' : 'items'} added</span>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="font-black text-base">₹{cart.reduce((s, i) => s + ((user?.is_student ? i.student_price : i.base_price) * i.quantity), 0)}</span>
-              <ChevronRight size={20} strokeWidth={3} />
+            <div className="flex items-center gap-2">
+              <span className="font-black text-sm border-r border-white/20 pr-3 uppercase tracking-widest text-[10px]">View cart</span>
+              <ChevronRight size={18} />
             </div>
           </button>
         </div>
@@ -298,7 +346,7 @@ export const Home = () => {
       {/* ═══ Back to Top ═══ */}
       {showTopBtn && (
         <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className={`fixed right-6 z-50 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full w-12 h-12 flex items-center justify-center shadow-xl transition-all animate-in zoom-in hover:scale-110 ${cart.length > 0 ? 'bottom-28' : 'bottom-8'}`}
+          className={`fixed right-6 z-50 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full w-12 h-12 flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all animate-in fade-in zoom-in hover:scale-110 ${cart.length > 0 ? 'bottom-[160px] lg:bottom-24' : 'bottom-[100px] lg:bottom-8'}`}
           aria-label="Back to top">
           <ArrowUp size={24} />
         </button>
