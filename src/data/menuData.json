@@ -1,0 +1,48 @@
+{
+  "categories": [
+    {
+      "name": "Dosas",
+      "image_url": "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&q=80&w=500"
+    },
+    {
+      "name": "Idly",
+      "image_url": "https://images.unsplash.com/photo-1589301760014-d929f39ce9b0?auto=format&fit=crop&q=80&w=500"
+    },
+    {
+      "name": "Fried Rice",
+      "image_url": "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&q=80&w=500"
+    },
+    {
+      "name": "Noodles",
+      "image_url": "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&q=80&w=500"
+    },
+    {
+      "name": "Milkshakes",
+      "image_url": "https://images.unsplash.com/photo-1579954115545-a95591f28bfc?auto=format&fit=crop&q=80&w=500"
+    },
+    {
+      "name": "Mojitos",
+      "image_url": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&q=80&w=500"
+    },
+    {
+      "name": "Fresh Juices",
+      "image_url": "https://images.unsplash.com/photo-1621506289937-e8e498c0413b?auto=format&fit=crop&q=80&w=500"
+    },
+    {
+      "name": "Fast Food & Snacks",
+      "image_url": "https://images.unsplash.com/photo-1561758033-d89a9ad46330?auto=format&fit=crop&q=80&w=500"
+    },
+    {
+      "name": "Indian Breads",
+      "image_url": "https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?auto=format&fit=crop&q=80&w=500"
+    },
+    {
+      "name": "Meals & Rice Bowls",
+      "image_url": "https://images.unsplash.com/photo-1589301760014-d929f39ce9b0?auto=format&fit=crop&q=80&w=500"
+    },
+    {
+      "name": "Starters & Gravies",
+      "image_url": "https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&q=80&w=500"
+    }
+  ]
+}
