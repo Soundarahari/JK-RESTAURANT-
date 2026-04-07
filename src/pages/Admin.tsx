@@ -280,26 +280,10 @@ export const Admin = () => {
           <p className="text-2xl font-black">₹{totalRevenue}</p>
           <p className="text-[10px] mt-1 opacity-80">{adminOrders.filter(o => o.status === 'completed').length} completed sales</p>
         </div>
-        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4 min-w-[140px] shadow-sm flex-1 transition-colors relative">
+        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4 min-w-[140px] shadow-sm flex-1 transition-colors">
           <div className="flex items-center gap-1.5 mb-1 text-gray-500 dark:text-gray-400"><ShoppingBag size={16} /> <span className="text-xs font-bold uppercase tracking-wider">Orders</span></div>
           <p className="text-2xl font-black text-gray-800 dark:text-white">{activeOrders.length}</p>
           <p className="text-[10px] mt-1 text-gray-400 dark:text-gray-500 font-medium">{adminOrders.length} total ever</p>
-          
-          <button 
-            onClick={async () => {
-              if (window.confirm('Clear ALL order history?')) {
-                const { error } = await supabase.from('orders').delete().gte('created_at', '1970-01-01');
-                if (error) alert(error.message);
-                else {
-                  alert('History cleared!');
-                  window.location.reload();
-                }
-              }
-            }}
-            className="absolute top-2 right-2 text-[10px] font-black text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-md opacity-50 hover:opacity-100 transition-opacity"
-          >
-            CLEAR ALL
-          </button>
         </div>
       </div>
 
