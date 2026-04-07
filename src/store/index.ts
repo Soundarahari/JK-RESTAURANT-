@@ -198,7 +198,8 @@ export const useStore = create<AppState>()(
       clearOrders: async () => {
         set({ isLoading: true });
         try {
-          const { error } = await supabase.from('orders').delete().neq('id', 'placeholder'); // Delete all
+          // Use gte on created_at to match all rows (every timestamp is >= epoch start)
+          const { error } = await supabase.from('orders').delete().gte('created_at', '1970-01-01');
           if (error) throw error;
           
           set({ adminOrders: [], orders: [], isLoading: false });
