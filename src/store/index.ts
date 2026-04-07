@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Product } from '../data/mock';
+import { Product, MOCK_PRODUCTS } from '../data/mock';
 import { supabase } from '../lib/supabase';
 
 export interface CartItem extends Product {
@@ -113,6 +113,9 @@ interface AppState {
   getTotalPrice: () => number;
   userPhones: Record<string, string>;
   lastOrderTime: number;
+  isLoading: boolean;
+  error: string | null;
+  seedDatabase: () => Promise<{ success: boolean; error?: string }>;
 }
 
 export const useStore = create<AppState>()(
@@ -130,13 +133,58 @@ export const useStore = create<AppState>()(
       setUser: (user) => set({ user }),
       userPhones: {},
       lastOrderTime: 0,
+      isLoading: false,
+      error: null,
       categories: [],
       fetchCategories: async () => {
+        set({ isLoading: true, error: null });
         const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
         if (!error && data) {
-          set({ categories: data });
+          set({ categories: data, isLoading: false });
         } else {
           console.error('Error fetching categories:', error);
+          set({ error: error?.message || 'Failed to fetch categories', isLoading: false });
+        }
+      },
+      seedDatabase: async () => {
+        set({ isLoading: true });
+        try {
+          // 1. Check if we already have products
+          const { count } = await supabase.from('products').select('*', { count: 'exact', head: true });
+          if (count && count > 0) {
+             set({ isLoading: false });
+             return { success: false, error: 'Database already has products. Delete them first to seed.' };
+          }
+
+          // 2. Insert Default Categories
+          const defaultCategories = [
+            { name: 'Meals', image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=200' },
+            { name: 'Chinese', image_url: 'https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&q=80&w=200' },
+            { name: 'Snacks', image_url: 'https://images.unsplash.com/photo-1621939514649-280e2ee62f60?auto=format&fit=crop&q=80&w=200' },
+            { name: 'Fast Food', image_url: 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?auto=format&fit=crop&q=80&w=200' },
+            { name: 'Coolers', image_url: 'https://images.unsplash.com/photo-1497515114629-f71d768fd07c?auto=format&fit=crop&q=80&w=200' },
+          ];
+          await supabase.from('categories').insert(defaultCategories);
+
+          // 3. Insert Mock Products (stripping mock IDs to let Supabase generate UUIDs)
+          const productsToSeed = MOCK_PRODUCTS.map(({ id, ...rest }) => ({
+            ...rest,
+            image_url: rest.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=500'
+          }));
+          const { error: prodError } = await supabase.from('products').insert(productsToSeed);
+          
+          if (prodError) throw prodError;
+
+          // 4. Reload everything
+          await get().fetchProducts();
+          await get().fetchCategories();
+          
+          set({ isLoading: false });
+          return { success: true };
+        } catch (err: any) {
+          console.error('Seeding error:', err);
+          set({ isLoading: false, error: err.message });
+          return { success: false, error: err.message };
         }
       },
       addCategory: async (category) => {
@@ -250,11 +298,13 @@ export const useStore = create<AppState>()(
       clearCart: () => set({ cart: [] }),
       products: [],
       fetchProducts: async () => {
+        set({ isLoading: true, error: null });
         const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: true });
         if (!error && data) {
-          set({ products: data as Product[] });
+          set({ products: data as Product[], isLoading: false });
         } else {
           console.error('Error fetching products:', error);
+          set({ error: error?.message || 'Failed to fetch products', isLoading: false });
         }
       },
       addProduct: async (product) => {
@@ -340,12 +390,12 @@ export const useStore = create<AppState>()(
 
           set({ lastOrderTime: now });
 
-          // 1. Send Email/Telegram Notification via Vercel API
-          try {
-            const apiSecret = import.meta.env.VITE_ORDER_NOTIFICATION_SECRET || 'test-secret-key';
-            const apiUrl = import.meta.env.PROD 
-              ? `${window.location.origin}/api/order-notification` 
-              : 'http://localhost:3000/api/order-notification';
+        try {
+          const apiSecret = import.meta.env.VITE_ORDER_NOTIFICATION_SECRET || 'test-secret-key';
+          const appUrl = window.location.origin;
+          const apiUrl = import.meta.env.PROD 
+            ? `${appUrl}/api/order-notification` 
+            : 'http://localhost:3000/api/order-notification';
             
             fetch(apiUrl, {
               method: 'POST',

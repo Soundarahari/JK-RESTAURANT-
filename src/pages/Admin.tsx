@@ -7,14 +7,14 @@ import { supabase } from '../lib/supabase';
 
 
 export const Admin = () => {
-  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories } = useStore();
+  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories, seedDatabase, isLoading } = useStore();
   const navigate = useNavigate();
   
   // 1. Admin Authorization check first
   const isAdmin = checkIsAdmin(user);
 
   // 2. Component State Hooks
-  const [activeTab, setActiveTab] = useState<'orders' | 'promos' | 'menu' | 'users'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'promos' | 'menu' | 'users' | 'system'>('orders');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newDish, setNewDish] = useState<Partial<Product>>({ 
     is_available: true, 
@@ -45,6 +45,16 @@ export const Admin = () => {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [originalCategoryName, setOriginalCategoryName] = useState<string>('');
   const [isSavingCategory, setIsSavingCategory] = useState(false);
+
+  const handleSeed = async () => {
+    if (!window.confirm('This will populate your database with sample products and categories. Continue?')) return;
+    const { success, error } = await seedDatabase();
+    if (success) {
+      alert('Database seeded successfully! Your shop is now ready.');
+    } else {
+      alert(`Seeding failed: ${error}`);
+    }
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -312,6 +322,12 @@ export const Admin = () => {
           className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'users' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
         >
           USERS
+        </button>
+        <button 
+          onClick={() => setActiveTab('system')}
+          className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'system' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
+        >
+          SYSTEM
         </button>
       </div>
 
@@ -793,6 +809,41 @@ export const Admin = () => {
                 )}
               </div>
             </section>
+          </div>
+        </div>
+      )}
+
+      {/* System Tab Content */}
+      {activeTab === 'system' && (
+        <div className="px-2 max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 p-8 shadow-sm">
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2 uppercase tracking-tight">System Controls</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-10 leading-relaxed">
+              Powerful tools for database administration and store initialization. 
+              Use these options with caution as they affect live data.
+            </p>
+            
+            <div className="p-8 rounded-[2rem] bg-brand-50 dark:bg-brand-900/10 border border-brand-100 dark:border-brand-900/20">
+              <div className="flex items-start gap-5 mb-8">
+                <div className="w-14 h-14 bg-brand-500 rounded-2xl flex items-center justify-center shadow-xl shadow-brand-500/20 text-white shrink-0">
+                  <RefreshCw size={24} className={isLoading ? 'animate-spin' : ''} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-gray-950 dark:text-white uppercase tracking-tight">Initialize Menu</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mt-1 font-medium">
+                    Populate your database with the default categories (Meals, Chinese, Coolers, etc.) and best-selling products. 
+                    <span className="block mt-1 text-brand-600 font-bold">Only works if the database is empty.</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleSeed}
+                disabled={isLoading}
+                className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-black py-5 rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-brand-500/20 active:scale-[0.97] transition-all flex items-center justify-center gap-2"
+              >
+                {isLoading ? 'Processing...' : 'Seed Sample Database'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ProductCard } from '../components/ProductCard';
-import { Search, ArrowUp, Star, Clock, MapPin, Flame, Utensils, Popcorn, Truck, GlassWater, Plus, Minus, ChevronRight } from 'lucide-react';
+import { Search, ArrowUp, Star, Clock, MapPin, Flame, Utensils, Popcorn, Truck, GlassWater, Plus, Minus, ChevronRight, RefreshCw } from 'lucide-react';
 import { useStore } from '../store';
 import { Product } from '../data/mock';
 
@@ -78,7 +78,7 @@ const BestsellerCard = ({ product }: { product: Product }) => {
 
 /* ══════════════════════════════════════════ */
 export const Home = () => {
-  const { products, fetchProducts, cart, getTotalPrice, user, categories, fetchCategories } = useStore();
+  const { products, fetchProducts, cart, getTotalPrice, user, categories, fetchCategories, isLoading, error } = useStore();
   const navigate = useNavigate();
 
   useEffect(() => { 
@@ -144,8 +144,51 @@ export const Home = () => {
 
   const isSearching = searchQuery.length > 0;
 
+  if (isLoading && products.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in duration-500">
+        <div className="w-12 h-12 border-4 border-brand-500/10 border-t-brand-500 rounded-full animate-spin mb-6 shadow-sm"></div>
+        <div className="space-y-1 text-center">
+          <p className="text-gray-900 dark:text-white font-black text-xs uppercase tracking-[0.2em]">Loading Menu</p>
+          <p className="text-gray-400 dark:text-gray-500 text-[10px] font-bold uppercase tracking-widest">Preparing deliciousness...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isLoading && products.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-8 text-center animate-in zoom-in-95 duration-500">
+        <div className="w-24 h-24 bg-gray-50 dark:bg-gray-800/50 rounded-[2rem] flex items-center justify-center mb-8 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden">
+           <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent opacity-50"></div>
+           <span className="text-5xl grayscale opacity-40 group-hover:grayscale-0 transition-all duration-700">🍛</span>
+        </div>
+        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-3 uppercase tracking-tight">The Menu is Empty</h2>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mb-10 leading-relaxed font-medium max-w-xs">
+          {error ? `Connection Error: ${error}` : "Our chefs are currently updating the database with today's specials. Please check back in a moment or visit Admin to seed sample data."}
+        </p>
+        <div className="flex flex-col w-full max-w-xs gap-3">
+          <button 
+            onClick={() => { fetchProducts(); fetchCategories(); }}
+            className="w-full bg-brand-500 text-white font-black py-4.5 rounded-2xl text-[11px] uppercase tracking-widest shadow-xl shadow-brand-500/20 active:scale-[0.97] transition-all flex items-center justify-center gap-2"
+          >
+            <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+            Try Refreshing
+          </button>
+          <div className="h-px bg-gray-100 dark:bg-gray-800/50 my-2"></div>
+          <button 
+            onClick={() => navigate('/admin')}
+            className="w-full bg-white dark:bg-gray-900 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-700 font-black py-4.5 rounded-2xl text-[11px] uppercase tracking-widest active:scale-[0.97] transition-all shadow-sm"
+          >
+            Go to Admin Panel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full animate-in fade-in duration-700">
 
       {/* ═══ Hero Banner ═══ */}
       <div className="relative -mx-4 lg:-mx-10 -mt-4 lg:-mt-8 mb-6 overflow-hidden">
