@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowLeft, Clock, MapPin } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, RefreshCw } from 'lucide-react';
 import L from 'leaflet';
 import { RESTAURANT_COORDS } from '../utils/geo';
 import { supabase } from '../lib/supabase';
@@ -181,21 +181,30 @@ export const TrackOrder = () => {
     <div className="fixed inset-0 z-[100] bg-white dark:bg-gray-900 flex flex-col h-[100dvh] overflow-hidden">
       {/* Header Overlay */}
       <div className="absolute top-0 left-0 right-0 z-[400] p-4 flex items-center justify-between pointer-events-none">
-         <button onClick={() => navigate('/profile')} className="w-12 h-12 bg-white dark:bg-gray-800 rounded-2xl shadow-xl flex items-center justify-center text-gray-900 dark:text-white pointer-events-auto border border-gray-100 dark:border-gray-700 hover:bg-gray-50 active:scale-95 transition-all">
+         <button onClick={() => navigate('/profile')} className="w-12 h-12 bg-white dark:bg-gray-900 rounded-2xl shadow-xl flex items-center justify-center text-gray-900 dark:text-white pointer-events-auto border border-gray-100 dark:border-gray-800 hover:bg-gray-50 active:scale-95 transition-all">
            <ArrowLeft size={24} />
          </button>
          
-         <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 flex items-center gap-2 pointer-events-auto">
-           {orderStatus === 'out_for_delivery' ? (
-             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-           ) : orderStatus === 'completed' ? (
-             <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-           ) : (
-             <div className={`w-2 h-2 rounded-full ${badge.bg} ${orderStatus !== 'completed' ? 'animate-pulse' : ''}`}></div>
-           )}
-           <span className={`text-xs font-black uppercase tracking-widest ${badge.color}`}>
-             {badge.label}
-           </span>
+         <div className="flex items-center gap-2 pointer-events-auto">
+           <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-xl border border-gray-100 dark:border-gray-800 flex items-center gap-2">
+             {orderStatus === 'out_for_delivery' ? (
+               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+             ) : orderStatus === 'completed' ? (
+               <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+             ) : (
+               <div className={`w-2 h-2 rounded-full ${badge.bg} ${orderStatus !== 'completed' ? 'animate-pulse' : ''}`}></div>
+             )}
+             <span className={`text-xs font-black uppercase tracking-widest ${badge.color}`}>
+               {badge.label}
+             </span>
+           </div>
+
+           <button 
+             onClick={() => window.location.reload()}
+             className="w-12 h-12 bg-white dark:bg-gray-900 rounded-2xl shadow-xl flex items-center justify-center text-gray-900 dark:text-white border border-gray-100 dark:border-gray-800 hover:bg-gray-50 active:scale-95 transition-all"
+           >
+             <RefreshCw size={20} />
+           </button>
          </div>
       </div>
 

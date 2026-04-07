@@ -16,7 +16,7 @@ const CATEGORY_GRADIENTS: Record<string, string> = {
 export const CategoryView = () => {
   const { subCategoryId } = useParams<{ subCategoryId: string }>();
   const navigate = useNavigate();
-  const { products } = useStore();
+  const { products, cart, user } = useStore();
 
   const decodedId = decodeURIComponent(subCategoryId || '');
 
@@ -75,6 +75,34 @@ export const CategoryView = () => {
           {categoryProducts.map(product => (
             <ProductCard key={product.id} product={product} />
           ))}
+        </div>
+      )}
+
+      {/* ═══ Floating Cart Bar ═══ */}
+      {cart.length > 0 && (
+        <div className="fixed bottom-[72px] lg:bottom-4 left-0 lg:left-64 right-0 px-4 pb-3 lg:pb-0 z-40 animate-in slide-in-from-bottom duration-500">
+          <button 
+            onClick={() => { if (!user) navigate('/profile?redirect=/cart'); else if (!user.phone) navigate('/profile'); else navigate('/cart'); }}
+            className="w-full max-w-md mx-auto bg-red-500 hover:bg-red-600 text-white rounded-2xl py-4 px-5 flex items-center justify-between shadow-[0_8px_30px_rgb(239,68,68,0.3)] transition-all active:scale-[0.98]"
+          >
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <img 
+                  src={cart[cart.length - 1]?.image_url} 
+                  className="w-10 h-10 rounded-lg object-cover border-2 border-white/20 shadow-inner"
+                  alt=""
+                />
+                <div className="absolute -top-2 -right-2 bg-white text-red-500 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shadow-md border border-red-100">
+                  {cart.reduce((s, i) => s + i.quantity, 0)}
+                </div>
+              </div>
+              <span className="font-black text-sm tracking-tight">{cart.reduce((s, i) => s + i.quantity, 0)} items added</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-black text-sm border-r border-white/20 pr-3 uppercase tracking-widest text-[10px]">View cart</span>
+              <ArrowLeft size={18} className="rotate-180" />
+            </div>
+          </button>
         </div>
       )}
     </div>

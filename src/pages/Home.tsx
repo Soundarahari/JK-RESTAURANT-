@@ -53,21 +53,29 @@ const BestsellerCard = ({ product }: { product: Product }) => {
             ₹{isStudentVerified ? product.student_price : product.base_price}
           </span>
           {cartItem ? (
-            <div className="bg-brand-500 flex items-center h-8 rounded-xl px-0.5 shadow-md">
-              <button onClick={() => cartItem.quantity === 1 ? removeFromCart(product.id) : updateQuantity(product.id, cartItem.quantity - 1)}
-                className="w-7 flex justify-center items-center text-white active:scale-90 transition-transform">
-                <Minus size={14} strokeWidth={3} />
+            <div className="flex items-center h-8 bg-white dark:bg-gray-900 border-2 border-red-500 rounded-xl overflow-hidden shadow-lg shadow-red-500/10 transition-all">
+              <button 
+                onClick={() => cartItem.quantity === 1 ? removeFromCart(product.id) : updateQuantity(product.id, cartItem.quantity - 1)}
+                className="w-8 h-full flex justify-center items-center text-red-500 hover:bg-red-50 transition-colors active:scale-90"
+              >
+                <Minus size={12} strokeWidth={4} />
               </button>
-              <span className="w-6 text-center text-xs font-black text-white">{cartItem.quantity}</span>
-              <button onClick={() => updateQuantity(product.id, cartItem.quantity + 1)}
-                className="w-7 flex justify-center items-center text-white active:scale-90 transition-transform">
-                <Plus size={14} strokeWidth={3} />
+              <span className="w-6 text-center text-[11px] font-black text-red-600 dark:text-red-400">{cartItem.quantity}</span>
+              <button 
+                onClick={() => updateQuantity(product.id, cartItem.quantity + 1)}
+                className="w-8 h-full flex justify-center items-center text-red-500 hover:bg-red-50 transition-colors active:scale-90"
+              >
+                <Plus size={12} strokeWidth={4} />
               </button>
             </div>
           ) : (
-            <button onClick={() => addToCart(product)} disabled={!product.is_available}
-              className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 h-8 px-5 rounded-xl font-bold text-[11px] uppercase tracking-wider hover:bg-brand-500 hover:text-white dark:hover:bg-brand-500 dark:hover:text-white transition-all active:scale-95 disabled:opacity-40">
-              Add
+            <button 
+              onClick={() => addToCart(product)} 
+              disabled={!product.is_available}
+              className="bg-white dark:bg-gray-950 text-red-500 border-2 border-red-500 h-8 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-950/30 transition-all shadow-md active:scale-95 disabled:border-gray-200 disabled:text-gray-300 flex items-center gap-1"
+            >
+              ADD 
+              <Plus size={12} strokeWidth={4} />
             </button>
           )}
         </div>
@@ -78,7 +86,7 @@ const BestsellerCard = ({ product }: { product: Product }) => {
 
 /* ══════════════════════════════════════════ */
 export const Home = () => {
-  const { products, fetchProducts, cart, getTotalPrice, user, categories, fetchCategories, isLoading, error } = useStore();
+  const { products, fetchProducts, cart, user, categories, fetchCategories, isLoading, error } = useStore();
   const navigate = useNavigate();
 
   useEffect(() => { 
@@ -96,7 +104,6 @@ export const Home = () => {
   }, []);
 
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
-  const cartTotal = getTotalPrice();
 
   /* ── Derived data ── */
   const derivedSubCategories = useMemo(() => {
@@ -310,14 +317,28 @@ export const Home = () => {
 
       {/* ═══ Floating Cart Bar ═══ */}
       {cart.length > 0 && (
-        <div className="fixed bottom-[72px] lg:bottom-6 left-0 lg:left-60 right-0 px-4 pb-3 lg:pb-0 z-40">
-          <button onClick={() => { if (!user || !user.phone) navigate('/profile'); else navigate('/cart'); }}
-            className="w-full max-w-md mx-auto lg:max-w-sm lg:ml-auto lg:mr-8 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl py-3.5 px-5 flex items-center justify-between shadow-xl shadow-brand-500/30 transition-all active:scale-[0.98] block">
-            <div className="flex items-center gap-2">
-              <div className="bg-white/20 rounded-lg px-2 py-1 text-xs font-black">{cartCount}</div>
-              <span className="font-bold text-sm">View Cart</span>
+        <div className="fixed bottom-[72px] lg:bottom-4 left-0 lg:left-64 right-0 px-4 pb-3 lg:pb-0 z-40 animate-in slide-in-from-bottom duration-500">
+          <button 
+            onClick={() => { if (!user) navigate('/profile?redirect=/cart'); else if (!user.phone) navigate('/profile'); else navigate('/cart'); }}
+            className="w-full max-w-md mx-auto bg-red-500 hover:bg-red-600 text-white rounded-2xl py-4 px-5 flex items-center justify-between shadow-[0_8px_30px_rgb(239,68,68,0.3)] transition-all active:scale-[0.98]"
+          >
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <img 
+                  src={cart[cart.length - 1]?.image_url} 
+                  className="w-10 h-10 rounded-lg object-cover border-2 border-white/20 shadow-inner"
+                  alt=""
+                />
+                <div className="absolute -top-2 -right-2 bg-white text-red-500 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shadow-md border border-red-100">
+                  {cartCount}
+                </div>
+              </div>
+              <span className="font-black text-sm tracking-tight">{cartCount} {cartCount === 1 ? 'item' : 'items'} added</span>
             </div>
-            <span className="font-black text-sm">₹{cartTotal}</span>
+            <div className="flex items-center gap-2">
+              <span className="font-black text-sm border-r border-white/20 pr-3 uppercase tracking-widest text-[10px]">View cart</span>
+              <ChevronRight size={18} />
+            </div>
           </button>
         </div>
       )}

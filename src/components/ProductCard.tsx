@@ -91,28 +91,29 @@ export const ProductCard = ({ product }: { product: Product }) => {
 
           <div>
             {cartItem ? (
-              <div className="bg-brand-500 flex items-center h-12 rounded-[1.25rem] shadow-xl shadow-brand-500/20 px-1 overflow-hidden transition-all">
+              <div className="flex items-center h-10 bg-white dark:bg-gray-900 border-2 border-red-500 rounded-xl overflow-hidden shadow-lg shadow-red-500/10">
                 <button 
                   onClick={() => cartItem.quantity === 1 ? removeFromCart(product.id) : updateQuantity(product.id, cartItem.quantity - 1)}
-                  className="w-10 flex justify-center items-center text-white active:scale-90 transition-transform"
+                  className="w-9 h-full flex justify-center items-center text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors active:scale-90"
                 >
-                  <Minus size={18} strokeWidth={3} />
+                  <Minus size={16} strokeWidth={4} />
                 </button>
-                <span className="w-8 text-center text-base font-black text-white">{cartItem.quantity}</span>
+                <span className="w-8 text-center text-sm font-black text-red-600 dark:text-red-400">{cartItem.quantity}</span>
                 <button 
                   onClick={() => updateQuantity(product.id, cartItem.quantity + 1)}
-                  className="w-10 flex justify-center items-center text-white active:scale-90 transition-transform"
+                  className="w-9 h-full flex justify-center items-center text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors active:scale-90"
                 >
-                  <Plus size={18} strokeWidth={3} />
+                  <Plus size={16} strokeWidth={4} />
                 </button>
               </div>
             ) : (
               <button 
                 onClick={() => addToCart(product)}
                 disabled={!product.is_available}
-                className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 h-12 px-8 rounded-[1.25rem] font-black text-sm uppercase tracking-widest hover:bg-brand-500 hover:text-white dark:hover:bg-brand-500 dark:hover:text-white transition-all shadow-xl hover:shadow-brand-500/30 active:scale-95 disabled:bg-gray-200 dark:disabled:bg-gray-800"
+                className="bg-white dark:bg-gray-950 text-red-500 border-2 border-red-500 h-10 px-6 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-950/30 transition-all shadow-md active:scale-95 disabled:border-gray-200 disabled:text-gray-300 flex items-center gap-1.5"
               >
-                Add+
+                ADD 
+                <Plus size={14} strokeWidth={4} className="mb-0.5" />
               </button>
             )}
           </div>

@@ -91,7 +91,9 @@ export const Cart = () => {
       <div className="fixed bottom-[72px] lg:bottom-0 left-0 lg:left-60 right-0 p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 z-40">
         <button
           onClick={() => {
-            if (!user || user.phone === '') {
+            if (!user) {
+              navigate('/profile?redirect=/cart');
+            } else if (!user.phone) {
               navigate('/profile');
             } else {
               navigate('/checkout');
@@ -99,10 +101,12 @@ export const Cart = () => {
           }}
           className="w-full max-w-md mx-auto h-14 bg-brand-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl shadow-brand-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
         >
-          {user?.phone ? (
-            <>Proceed to Checkout <ShoppingCart size={18} /></>
-          ) : (
+          {!user ? (
+            'Sign in to Place Order'
+          ) : !user.phone ? (
             'Complete Profile to Checkout'
+          ) : (
+            <>Proceed to Checkout <ShoppingCart size={18} /></>
           )}
         </button>
       </div>

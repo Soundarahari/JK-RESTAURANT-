@@ -63,10 +63,13 @@ export const Profile = () => {
   };
 
   // Google Sign In
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async (redirect?: string) => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const returnPath = redirect || searchParams.get('redirect') || '/profile';
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin + '/profile' }
+      options: { redirectTo: window.location.origin + returnPath }
     });
     if (error) alert('Login failed: ' + error.message);
   };
@@ -123,7 +126,7 @@ export const Profile = () => {
             </div>
 
             <button
-              onClick={handleGoogleLogin}
+              onClick={() => handleGoogleLogin()}
               className="group w-full flex items-center justify-center gap-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black py-4.5 rounded-2xl transition-all text-sm shadow-xl hover:shadow-gray-900/30 dark:hover:shadow-white/10 active:scale-95"
             >
               <svg width="20" height="20" viewBox="0 0 24 24">
@@ -309,13 +312,24 @@ export const Profile = () => {
                       ))}
                     </div>
                     
-                    {order.status === 'out_for_delivery' && (
+                    {['pending', 'preparing', 'ready', 'out_for_delivery'].includes(order.status) && (
                       <Link 
                         to={`/track/${order.id}`}
-                        className="w-full bg-brand-500 hover:bg-brand-600 text-white font-black py-4 rounded-[1.5rem] text-xs uppercase tracking-widest shadow-xl shadow-brand-500/30 flex items-center justify-center gap-2 transition-all active:scale-95 group"
+                        className={`w-full font-black py-4 rounded-[1.5rem] text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95 group ${
+                          order.status === 'out_for_delivery' ? 'bg-brand-500 hover:bg-brand-600 text-white shadow-brand-500/30' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
                       >
-                        <MapPin size={16} className="animate-bounce" /> 
-                        <span>Track Live Location</span>
+                        {order.status === 'out_for_delivery' ? (
+                          <>
+                            <MapPin size={16} className="animate-bounce" /> 
+                            <span>Track Live Location</span>
+                          </>
+                        ) : (
+                          <>
+                            <Package size={16} className="animate-pulse" />
+                            <span>Track Order Status</span>
+                          </>
+                        )}
                         <ArrowRight size={16} className="opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                       </Link>
                     )}
