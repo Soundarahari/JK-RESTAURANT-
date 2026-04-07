@@ -207,10 +207,12 @@ export const Profile = () => {
   // ==========================================
   // FULLY LOGGED IN — Show Profile
   // ==========================================
+  const [activeTab, setActiveTab] = useState<'orders' | 'status' | 'account'>('orders');
+
   return (
     <div className="pb-24">
       {/* Profile Header */}
-      <div className="bg-gradient-to-br from-brand-600 to-emerald-600 -mx-4 -mt-4 px-5 pt-8 pb-12 mb-[-32px] rounded-b-[3rem] shadow-xl">
+      <div className="bg-gradient-to-br from-brand-600 to-emerald-600 -mx-4 -mt-4 px-5 pt-8 pb-16 mb-[-48px] rounded-b-[3rem] shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {user.avatar_url ? (
@@ -234,253 +236,263 @@ export const Profile = () => {
         </div>
       </div>
 
-      {/* Student Status Card */}
-      <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-800 p-6 mb-6 transition-colors relative z-10 mx-2">
-        <div className="flex items-center gap-2.5 mb-6">
-          <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center">
-            <GraduationCap size={18} className="text-brand-500" />
-          </div>
-          <h3 className="font-black text-[15px] dark:text-white uppercase tracking-wider">Student Status</h3>
+      {/* Modern Tabs */}
+      <div className="relative z-10 mx-4 mb-6">
+        <div className="bg-white dark:bg-gray-900 p-1.5 rounded-[1.5rem] shadow-xl border border-gray-100 dark:border-gray-800 flex items-center gap-1">
+          {[
+            { id: 'orders', icon: Package, label: 'My Orders' },
+            { id: 'status', icon: GraduationCap, label: 'Status' },
+            { id: 'account', icon: User, label: 'Account' }
+          ].map((tab) => {
+             const Icon = tab.icon;
+             const isActive = activeTab === tab.id;
+             return (
+               <button 
+                 key={tab.id}
+                 onClick={() => setActiveTab(tab.id as any)}
+                 className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl transition-all duration-300 ${isActive ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/30' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+               >
+                 <Icon size={18} className={isActive ? 'text-white' : 'text-gray-400'} />
+                 <span className={`text-[10px] font-black uppercase tracking-wider mt-1 ${isActive ? 'text-white' : 'text-gray-500'}`}>{tab.label}</span>
+               </button>
+             );
+          })}
         </div>
+      </div>
 
-        {isVerified ? (
-          <div className="bg-green-50/50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/50 text-green-700 dark:text-green-400 p-5 rounded-2xl flex items-start gap-4">
-            <div className="w-10 h-10 bg-green-500 text-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-green-500/20">
-              <CheckCircle size={20} />
-            </div>
-            <div>
-              <p className="font-black text-sm">Auto-Verified ✓</p>
-              <p className="text-xs mt-1 leading-relaxed opacity-80">You are eligible for student-only pricing on all menu items.</p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {appliedPromoCode ? (
-              <div className="bg-brand-50/50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-900/50 p-5 rounded-2xl flex items-center justify-between">
-                <div>
-                  <p className="font-black text-sm text-brand-700 dark:text-brand-400">Promo Applied: {appliedPromoCode.code}</p>
-                  <p className="text-xs mt-0.5 text-brand-600/80 dark:text-brand-500 font-medium">
-                    {appliedPromoCode.discount_type === 'percentage' ? `${appliedPromoCode.discount_value}% OFF` : `₹${appliedPromoCode.discount_value} OFF`} active on your cart.
-                  </p>
+      {/* Tab Content */}
+      <div className="px-4">
+        {/* ORDERS TAB */}
+        {activeTab === 'orders' && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+            {orders.length === 0 ? (
+              <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl border border-dashed border-gray-200 dark:border-gray-700">
+                <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Package size={24} className="text-gray-400" />
                 </div>
-                <button 
-                  onClick={() => setAppliedPromoCode(null)}
-                  className="text-red-500 font-bold text-xs uppercase hover:underline"
-                >
-                  Remove
-                </button>
+                <p className="font-black text-sm text-gray-800 dark:text-white mb-1">No orders yet</p>
+                <p className="text-xs text-gray-500">Your recent orders will appear here.</p>
               </div>
             ) : (
-              <div className="bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 p-5 rounded-2xl">
-                <p className="font-black text-sm text-gray-800 dark:text-white uppercase tracking-tight">Regular Customer</p>
-                <p className="text-xs mt-1 text-gray-500 leading-relaxed font-medium mb-4">Have a promo code? Enter it below to unlock special pricing.</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Enter Promo Code"
-                    value={promoInput}
-                    onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
-                    className="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 text-sm font-bold outline-none focus:border-brand-500 uppercase placeholder:normal-case"
-                  />
-                  <button
-                    onClick={handleApplyPromo}
-                    disabled={!promoInput}
-                    className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 font-black rounded-xl text-xs uppercase tracking-widest disabled:opacity-50 active:scale-95 transition-all"
-                  >
-                    Apply
-                  </button>
-                </div>
+              <div className="space-y-4">
+                {orders.map(order => (
+                  <div key={order.id} className="bg-white dark:bg-gray-900 shadow-xl border border-gray-100 dark:border-gray-800 rounded-[2rem] p-5 relative overflow-hidden">
+                    {order.status === 'out_for_delivery' && (
+                      <div className="absolute top-0 left-0 w-full h-1 bg-brand-500 animate-pulse"></div>
+                    )}
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{new Date(order.created_at).toLocaleDateString()}</span>
+                        <h4 className="font-black text-lg text-gray-900 dark:text-white mt-0.5 tracking-tight">₹{order.total_amount}</h4>
+                      </div>
+                      <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
+                        order.status === 'pending' ? 'bg-yellow-50 text-yellow-600 border-yellow-200' :
+                        order.status === 'preparing' ? 'bg-blue-50 text-blue-600 border-blue-200 animate-pulse' :
+                        order.status === 'out_for_delivery' ? 'bg-brand-50 text-brand-600 border-brand-200 shadow-lg shadow-brand-500/20 animate-pulse' :
+                        order.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                        'bg-gray-100 text-gray-600 border-gray-200'
+                      }`}>
+                        {order.status === 'out_for_delivery' ? '🚗 Out for Delivery' : order.status}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-3 mb-4 space-y-1.5">
+                      {order.items.map((item, idx) => (
+                        <p key={idx} className="text-xs text-gray-600 dark:text-gray-400 font-medium flex items-center justify-between">
+                          <span><span className="font-black text-gray-900 dark:text-white mr-1.5 w-4 inline-block">{item.quantity}x</span> {item.name}</span>
+                          <span className="text-gray-400">₹{((user?.is_student ? item.student_price : item.base_price) || 0) * item.quantity}</span>
+                        </p>
+                      ))}
+                    </div>
+                    
+                    {order.status === 'out_for_delivery' && (
+                      <Link 
+                        to={`/track/${order.id}`}
+                        className="w-full bg-brand-500 hover:bg-brand-600 text-white font-black py-4 rounded-[1.5rem] text-xs uppercase tracking-widest shadow-xl shadow-brand-500/30 flex items-center justify-center gap-2 transition-all active:scale-95 group"
+                      >
+                        <MapPin size={16} className="animate-bounce" /> 
+                        <span>Track Live Location</span>
+                        <ArrowRight size={16} className="opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                      </Link>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
         )}
-      </div>
 
-      {/* My Orders Section */}
-      <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-800 p-6 mb-6 transition-colors relative z-10 mx-2">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-              <Package size={18} className="text-orange-500" />
-            </div>
-            <h3 className="font-black text-[15px] dark:text-white uppercase tracking-wider">My Orders</h3>
-          </div>
-          {orders.length > 0 && (
-            <span className="text-[10px] font-black text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md">{orders.length}</span>
-          )}
-        </div>
-
-        {orders.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50/50 dark:bg-gray-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-            <p className="font-black text-sm text-gray-800 dark:text-white mb-1">No orders yet</p>
-            <p className="text-xs text-gray-500">Your recent orders will appear here.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {orders.map(order => (
-              <div key={order.id} className="bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{new Date(order.created_at).toLocaleDateString()}</span>
-                    <h4 className="font-black text-sm text-gray-900 dark:text-white mt-0.5 tracking-tight border-b-2 border-brand-500 inline-block">₹{order.total_amount}</h4>
-                  </div>
-                  <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                    order.status === 'pending' ? 'bg-yellow-50 text-yellow-600 border-yellow-200' :
-                    order.status === 'preparing' ? 'bg-blue-50 text-blue-600 border-blue-200 animate-pulse' :
-                    order.status === 'out_for_delivery' ? 'bg-brand-50 text-brand-600 border-brand-200 animate-pulse' :
-                    order.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
-                    'bg-gray-100 text-gray-600 border-gray-200'
-                  }`}>
-                    {order.status === 'out_for_delivery' ? 'Out for Delivery' : order.status}
-                  </div>
+        {/* STATUS TAB */}
+        {activeTab === 'status' && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-500 bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-800 p-6 relative overflow-hidden">
+             {isVerified && (
+                <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full blur-2xl pointer-events-none"></div>
+             )}
+             <div className="flex items-center gap-3 mb-8">
+                <div className="w-10 h-10 rounded-2xl bg-brand-500/10 flex items-center justify-center">
+                  <GraduationCap size={20} className="text-brand-500" />
                 </div>
-                <div className="space-y-1 mb-3">
-                  {order.items.map((item, idx) => (
-                    <p key={idx} className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                      <span className="font-black text-gray-900 dark:text-white mr-1.5">{item.quantity}x</span> {item.name}
+                <div>
+                  <h3 className="font-black text-lg dark:text-white tracking-tight">Student Status</h3>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Verification Center</p>
+                </div>
+             </div>
+
+            {isVerified ? (
+              <div className="bg-green-50/50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/50 p-6 rounded-[2rem] flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-green-500 text-white rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-green-500/20">
+                  <CheckCircle size={32} />
+                </div>
+                <p className="font-black text-lg text-green-700 dark:text-green-400">Verified Student</p>
+                <p className="text-sm mt-2 text-green-600/80 dark:text-green-500/80 leading-relaxed font-medium">You have unlocked student-only pricing on all menu items automatically.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {appliedPromoCode ? (
+                  <div className="bg-brand-50/50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-900/50 p-6 rounded-[2rem] text-center">
+                    <p className="font-black text-brand-700 dark:text-brand-400 text-lg">{appliedPromoCode.code}</p>
+                    <p className="text-sm mt-1 text-brand-600/80 dark:text-brand-500 font-medium">
+                      {appliedPromoCode.discount_type === 'percentage' ? `${appliedPromoCode.discount_value}% OFF` : `₹${appliedPromoCode.discount_value} OFF`} active on your cart.
                     </p>
-                  ))}
-                </div>
-                
-                {order.status === 'out_for_delivery' && (
-                  <Link 
-                    to={`/track/${order.id}`}
-                    className="mt-2 w-full bg-brand-500 hover:bg-brand-600 text-white font-black py-2.5 rounded-xl text-[11px] uppercase tracking-widest shadow-md flex items-center justify-center gap-2 transition-all active:scale-95"
-                  >
-                    <MapPin size={14} /> Track Delivery (Live)
-                  </Link>
+                    <button 
+                      onClick={() => setAppliedPromoCode(null)}
+                      className="mt-6 px-6 py-2 bg-white/50 dark:bg-black/20 text-red-500 font-black text-[10px] uppercase tracking-widest rounded-full hover:bg-white dark:hover:bg-black transition-colors"
+                    >
+                      Remove Code
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 p-6 rounded-[2rem]">
+                    <div className="mb-6">
+                      <p className="font-black text-sm text-gray-800 dark:text-white uppercase tracking-tight">Regular Account</p>
+                      <p className="text-xs mt-1 text-gray-500 leading-relaxed font-medium">Have a promo code? Enter it below to unlock special discounts.</p>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      <input
+                        type="text"
+                        placeholder="e.g. SAVE20"
+                        value={promoInput}
+                        onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                        className="w-full bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-2xl px-5 py-4 text-sm font-black outline-none focus:border-brand-500 tracking-wider placeholder:normal-case placeholder:font-medium text-center"
+                      />
+                      <button
+                        onClick={handleApplyPromo}
+                        disabled={!promoInput}
+                        className="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-4 font-black rounded-2xl text-xs uppercase tracking-widest disabled:opacity-50 active:scale-95 shadow-xl transition-all"
+                      >
+                        Apply Code
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
-            ))}
+            )}
           </div>
         )}
-      </div>
 
-      {/* Account Info */}
-      <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-800 p-6 mx-2">
-        <h3 className="font-black text-[15px] mb-6 dark:text-white uppercase tracking-wider flex items-center gap-2">
-          <User size={16} className="text-gray-400" /> Account Details
-        </h3>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center py-1">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Full Name</span>
-            <span className="text-sm font-black text-gray-900 dark:text-white">{user.full_name}</span>
-          </div>
-          <div className="flex justify-between items-center py-1">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Email</span>
-            <span className="text-sm font-black text-gray-900 dark:text-white truncate max-w-[180px]">{user.email}</span>
-          </div>
-          
-          {/* Editable Primary Phone */}
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Primary Phone</span>
-              {!isEditingPhone ? (
-                <button 
-                  onClick={() => { setIsEditingPhone(true); setEditPhoneValue(user.phone || ''); }}
-                  className="text-[10px] font-black text-brand-500 uppercase tracking-wider"
-                >
-                  {user.phone ? 'Edit' : '+ Add'}
-                </button>
-              ) : (
-                <button 
-                  onClick={() => setIsEditingPhone(false)}
-                  className="text-[10px] font-black text-gray-400 uppercase tracking-wider"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-            {!isEditingPhone ? (
-              <div className="flex items-center gap-2 text-sm font-black text-gray-900 dark:text-white">
-                {user.phone ? `+91 ${user.phone}` : <span className="text-gray-400 font-medium italic text-xs">Not added yet</span>}
-                {user.phone && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>}
+        {/* ACCOUNT TAB */}
+        {activeTab === 'account' && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-500 bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-800 p-6">
+            <h3 className="font-black text-[15px] mb-6 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <User size={16} className="text-gray-400" /> Details
+            </h3>
+            <div className="space-y-5">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Full Name</span>
+                <span className="text-sm font-black text-gray-900 dark:text-white">{user.full_name}</span>
               </div>
-            ) : (
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">+91</span>
-                  <input
-                    type="tel"
-                    maxLength={10}
-                    autoFocus
-                    value={editPhoneValue}
-                    onChange={(e) => setEditPhoneValue(e.target.value.replace(/\D/g, ''))}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-12 pr-3 text-sm font-bold outline-none focus:border-brand-500"
-                  />
+              
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Email Address</span>
+                <span className="text-sm font-black text-gray-900 dark:text-white block truncate">{user.email}</span>
+              </div>
+              
+              {/* Primary Phone */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Primary Phone</span>
+                  {!isEditingPhone ? (
+                    <button onClick={() => { setIsEditingPhone(true); setEditPhoneValue(user.phone || ''); }} className="text-[10px] font-black text-brand-500 uppercase tracking-wider px-3 py-1 bg-brand-50 dark:bg-brand-900/20 rounded-lg">
+                      {user.phone ? 'Edit' : '+ Add'}
+                    </button>
+                  ) : (
+                    <button onClick={() => setIsEditingPhone(false)} className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Cancel</button>
+                  )}
                 </div>
-                <button
-                  onClick={() => {
-                    if (editPhoneValue.length === 10) {
-                      updatePhone(editPhoneValue);
-                      setIsEditingPhone(false);
-                    } else {
-                      alert('Please enter a valid 10-digit number');
-                    }
-                  }}
-                  className="bg-brand-500 text-white font-black text-xs px-4 rounded-xl active:scale-95 transition-all"
-                >
-                  Save
-                </button>
+                {!isEditingPhone ? (
+                  <div className="flex items-center gap-2 text-sm font-black text-gray-900 dark:text-white">
+                    {user.phone ? `+91 ${user.phone}` : <span className="text-gray-400 font-medium italic text-xs">Not added</span>}
+                    {user.phone && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>}
+                  </div>
+                ) : (
+                  <div className="flex gap-2 mt-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">+91</span>
+                      <input
+                        type="tel" maxLength={10} autoFocus
+                        value={editPhoneValue} onChange={(e) => setEditPhoneValue(e.target.value.replace(/\D/g, ''))}
+                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-10 pr-3 text-sm font-bold outline-none focus:border-brand-500"
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (editPhoneValue.length === 10) { updatePhone(editPhoneValue); setIsEditingPhone(false); } else { alert('Valid 10-digit number required'); }
+                      }}
+                      className="bg-brand-500 text-white font-black text-xs px-4 rounded-xl active:scale-95 transition-all shadow-md"
+                    >
+                      Save
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Alternate Phone */}
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Alternate Phone</span>
-              {!isEditingAltPhone ? (
-                <button 
-                  onClick={() => { setIsEditingAltPhone(true); setAltPhoneValue(altPhone); }}
-                  className="text-[10px] font-black text-brand-500 uppercase tracking-wider"
-                >
-                  {altPhone ? 'Edit' : '+ Add'}
-                </button>
-              ) : (
-                <button 
-                  onClick={() => setIsEditingAltPhone(false)}
-                  className="text-[10px] font-black text-gray-400 uppercase tracking-wider"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-            {!isEditingAltPhone ? (
-              <div className="flex items-center gap-2 text-sm font-black text-gray-900 dark:text-white">
-                {altPhone ? `+91 ${altPhone}` : <span className="text-gray-400 font-medium italic text-xs">Not added yet</span>}
-                {altPhone && <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>}
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">+91</span>
-                  <input
-                    type="tel"
-                    maxLength={10}
-                    autoFocus
-                    value={altPhoneValue}
-                    onChange={(e) => setAltPhoneValue(e.target.value.replace(/\D/g, ''))}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-12 pr-3 text-sm font-bold outline-none focus:border-brand-500"
-                  />
+              {/* Alternate Phone */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Alternate Phone</span>
+                  {!isEditingAltPhone ? (
+                    <button onClick={() => { setIsEditingAltPhone(true); setAltPhoneValue(altPhone); }} className="text-[10px] font-black text-brand-500 uppercase tracking-wider px-3 py-1 bg-brand-50 dark:bg-brand-900/20 rounded-lg">
+                      {altPhone ? 'Edit' : '+ Add'}
+                    </button>
+                  ) : (
+                    <button onClick={() => setIsEditingAltPhone(false)} className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Cancel</button>
+                  )}
                 </div>
-                <button
-                  onClick={() => {
-                    if (altPhoneValue.length === 10) {
-                      setAltPhone(altPhoneValue);
-                      setIsEditingAltPhone(false);
-                    } else {
-                      alert('Please enter a valid 10-digit number');
-                    }
-                  }}
-                  className="bg-brand-500 text-white font-black text-xs px-4 rounded-xl active:scale-95 transition-all"
-                >
-                  Save
-                </button>
+                {!isEditingAltPhone ? (
+                  <div className="flex items-center gap-2 text-sm font-black text-gray-900 dark:text-white">
+                    {altPhone ? `+91 ${altPhone}` : <span className="text-gray-400 font-medium italic text-xs">Not added</span>}
+                  </div>
+                ) : (
+                  <div className="flex gap-2 mt-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">+91</span>
+                      <input
+                        type="tel" maxLength={10} autoFocus
+                        value={altPhoneValue} onChange={(e) => setAltPhoneValue(e.target.value.replace(/\D/g, ''))}
+                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-10 pr-3 text-sm font-bold outline-none focus:border-brand-500"
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (altPhoneValue.length === 10) { setAltPhone(altPhoneValue); setIsEditingAltPhone(false); } else { alert('Valid 10-digit number required'); }
+                      }}
+                      className="bg-brand-500 text-white font-black text-xs px-4 rounded-xl active:scale-95 transition-all shadow-md"
+                    >
+                      Save
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+            
+            <button
+               onClick={handleLogout}
+               className="mt-8 w-full py-4 text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-2xl transition-all"
+            >
+              Sign Out Securely
+            </button>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
