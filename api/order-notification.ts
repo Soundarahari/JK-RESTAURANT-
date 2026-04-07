@@ -75,6 +75,47 @@ export default async function handler(req: any, res: any) {
     await transporter.sendMail(mailOptions);
     console.log(`Email successfully sent to ${customerContact.email} for order ${orderId}`);
 
+    // Send Telegram Notification
+    try {
+      if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+        let telegramMessage = `*🚨 NEW ORDER RECEIVED!*\n\n`;
+        telegramMessage += `*Order ID:* ${orderId}\n`;
+        telegramMessage += `*Customer:* ${customerContact.name || 'N/A'}\n`;
+        telegramMessage += `*Email:* ${customerContact.email}\n`;
+        if (customerContact.phone) {
+          telegramMessage += `*Phone:* ${customerContact.phone}\n`;
+        }
+        telegramMessage += `\n*Items:*\n`;
+        items.forEach((item: any) => {
+          telegramMessage += `- ${item.quantity}x ${item.name} ($${Number(item.price * item.quantity).toFixed(2)})\n`;
+        });
+        telegramMessage += `\n*Total Amount:* $${Number(totalAmount).toFixed(2)}`;
+
+        const telegramRes = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: process.env.TELEGRAM_CHAT_ID,
+            text: telegramMessage,
+            parse_mode: 'Markdown'
+          }),
+        });
+        
+        if (!telegramRes.ok) {
+          console.error(`Telegram API responded with status ${telegramRes.status}`);
+        } else {
+          console.log(`Telegram notification successfully sent for order ${orderId}`);
+        }
+      } else {
+        console.warn('Telegram credentials missing, skipping Telegram notification.');
+      }
+    } catch (telegramError) {
+      console.error('Failed to send Telegram notification:', telegramError);
+      // Gracefully handle error and don't throw to prevent crashing the API response
+    }
+
     // Return success response
     return res.status(200).json({ 
       success: true, 
