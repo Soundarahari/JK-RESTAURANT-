@@ -95,14 +95,27 @@ export const DriverDelivery = () => {
   const startDelivery = async () => {
     if (!orderId || !order) return;
 
-    // Update status to out_for_delivery
-    const { error: updateError } = await supabase
-      .from('orders')
-      .update({ status: 'out_for_delivery' })
-      .eq('id', orderId);
+    console.log('[DRIVER] Starting delivery for order:', orderId);
 
-    if (updateError) {
-      alert('Failed to update order status. Please try again.');
+    try {
+      const response = await fetch('/api/driver-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, newStatus: 'out_for_delivery' }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('[DRIVER] ❌ Failed to start delivery:', result);
+        alert('Failed to update order status. Please try again.');
+        return;
+      }
+
+      console.log('[DRIVER] ✅ Order status updated to out_for_delivery:', result);
+    } catch (err) {
+      console.error('[DRIVER] ❌ Network error starting delivery:', err);
+      alert('Network error. Please check your connection and try again.');
       return;
     }
 
@@ -126,19 +139,26 @@ export const DriverDelivery = () => {
       );
       watchIdRef.current = watchId;
 
-      // Push coordinates to Supabase every 5 seconds (batched to reduce writes)
+      // Push GPS coordinates via API every 5 seconds (bypasses RLS)
       updateIntervalRef.current = setInterval(async () => {
         if (latestPosRef.current) {
-          await supabase
-            .from('orders')
-            .update({
-              driver_location: {
-                lat: latestPosRef.current.lat,
-                lng: latestPosRef.current.lng,
-                timestamp: new Date().toISOString(),
-              }
-            })
-            .eq('id', orderId);
+          try {
+            await fetch('/api/driver-update', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                orderId,
+                newStatus: 'out_for_delivery',
+                driverLocation: {
+                  lat: latestPosRef.current.lat,
+                  lng: latestPosRef.current.lng,
+                  timestamp: new Date().toISOString(),
+                },
+              }),
+            });
+          } catch (err) {
+            console.error('[DRIVER] GPS update failed:', err);
+          }
         }
       }, 5000);
     } else {
@@ -159,14 +179,28 @@ export const DriverDelivery = () => {
       updateIntervalRef.current = null;
     }
 
-    // Update status to completed & clear driver_location
-    const { error: updateError } = await supabase
-      .from('orders')
-      .update({ status: 'completed', driver_location: null })
-      .eq('id', orderId);
+    // Update status to completed & clear driver_location via API (bypasses RLS)
+    console.log('[DRIVER] Marking order as delivered:', orderId);
 
-    if (updateError) {
-      alert('Failed to update order status.');
+    try {
+      const response = await fetch('/api/driver-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, newStatus: 'completed' }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('[DRIVER] ❌ Failed to mark as delivered:', result);
+        alert('Failed to update order status. Please try again.');
+        return;
+      }
+
+      console.log('[DRIVER] ✅ Order marked as completed:', result);
+    } catch (err) {
+      console.error('[DRIVER] ❌ Network error marking delivered:', err);
+      alert('Network error. Please check your connection and try again.');
       return;
     }
 
