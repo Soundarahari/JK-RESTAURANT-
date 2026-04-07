@@ -256,16 +256,28 @@ export const Home = () => {
             <h2 className="text-[15px] lg:text-lg font-black text-gray-800 dark:text-white mb-4 uppercase tracking-wide">
               What's on your mind?
             </h2>
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-2 gap-y-5">
+            <div className="flex overflow-x-auto hide-scrollbar gap-4 -mx-4 px-4 lg:mx-0 lg:px-0 pb-2 snap-x snap-mandatory">
               {displayCategories.map((sc, i) => (
-                <Link key={sc.name} to={`/category/${encodeURIComponent(sc.name)}`}
-                  className="flex flex-col items-center group animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
-                  <div className="w-[76px] h-[76px] lg:w-24 lg:h-24 rounded-full overflow-hidden border-[3px] border-white dark:border-gray-800 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110 group-active:scale-95 bg-gray-100 dark:bg-gray-800 ring-2 ring-gray-100 dark:ring-gray-700">
-                    <img src={sc.image} alt={sc.name} className="w-full h-full object-cover" loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200'; }}
+                <Link
+                  key={sc.name}
+                  to={`/category/${encodeURIComponent(sc.name)}`}
+                  className="flex flex-col items-center group animate-fade-in flex-shrink-0 snap-start"
+                  style={{ animationDelay: `${i * 40}ms` }}
+                >
+                  <div className="w-[84px] h-[84px] lg:w-28 lg:h-28 rounded-full overflow-hidden border-[3px] border-white dark:border-gray-800 shadow-md group-hover:shadow-xl transition-all duration-300 group-hover:scale-105 group-active:scale-95 bg-gray-100 dark:bg-gray-800 ring-2 ring-gray-100 dark:ring-gray-700 relative">
+                    <img
+                      src={sc.image}
+                      alt={sc.name}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200";
+                      }}
                     />
+                    <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors"></div>
                   </div>
-                  <span className="text-[11px] lg:text-xs font-bold text-gray-600 dark:text-gray-300 mt-2 text-center leading-tight max-w-[80px]" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  <span className="text-[10px] lg:text-[11px] font-black text-gray-700 dark:text-gray-300 mt-2.5 text-center leading-tight max-w-[84px] uppercase tracking-tighter">
                     {sc.name}
                   </span>
                 </Link>

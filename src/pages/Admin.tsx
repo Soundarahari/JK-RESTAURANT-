@@ -121,14 +121,14 @@ export const Admin = () => {
         .neq("id", "00000000-0000-0000-0000-000000000000");
       if (cError) throw cError;
 
-      // 3. Insert new categories based on unique categories in MOCK_PRODUCTS
+      // 3. Insert new categories based on unique sub_categories in MOCK_PRODUCTS
       const uniqueCategories = [
-        ...new Set(MOCK_PRODUCTS.map((p) => p.category)),
+        ...new Set(MOCK_PRODUCTS.map((p) => p.sub_category || p.category)),
       ];
       const categoryData = uniqueCategories.map((name) => ({
         name,
         image_url:
-          MOCK_PRODUCTS.find((p) => p.category === name)?.image_url || "",
+          MOCK_PRODUCTS.find((p) => (p.sub_category || p.category) === name)?.image_url || "",
       }));
 
       const { error: cInsError } = await supabase
