@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Link } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
+import { PwaBadge } from './components/PwaBadge';
 import { Home } from './pages/Home';
 import { Cart } from './pages/Cart';
 import { Profile } from './pages/Profile';
@@ -9,7 +10,7 @@ import { TrackOrder } from './pages/TrackOrder';
 import { DriverDelivery } from './pages/DriverDelivery';
 import { CategoryView } from './pages/CategoryView';
 import { useState, useEffect } from 'react';
-import { Moon, Sun, Download, User } from 'lucide-react';
+import { Moon, Sun, User } from 'lucide-react';
 import { useStore } from './store';
 
 // Automatically scrolls to top on every route change
@@ -59,37 +60,11 @@ function App() {
     }
   }, [darkMode]);
 
-  // PWA Installation Hook
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevent the mini-infobar from appearing on mobile
-      e.preventDefault();
-      // Stash the event so it can be triggered later
-      setDeferredPrompt(e);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    // Show the install prompt
-    deferredPrompt.prompt();
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
-    // We no longer need the prompt. Clear it up.
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-    }
-  };
-
   return (
     <Router>
       <RouteTracker />
       <ScrollToTop />
+      <PwaBadge />
       <Routes>
         {/* ── Driver Delivery Page — standalone, no app chrome ── */}
         <Route path="/driver/:orderId" element={<DriverDelivery />} />
@@ -103,15 +78,7 @@ function App() {
               {/* Mobile header — centred, max-w-md */}
               <div className="flex items-center justify-between p-4 max-w-md mx-auto lg:hidden">
                 <div className="w-8 h-8 flex items-center justify-center">
-                  {deferredPrompt && (
-                    <button
-                      onClick={handleInstallClick}
-                      className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center hover:bg-brand-200 transition-colors"
-                      title="Install App"
-                    >
-                      <Download size={18} />
-                    </button>
-                  )}
+                  {/* PWA Install/Update handled by PwaBadge component */}
                 </div>
                 <h1 className="text-2xl font-black text-center text-brand-600 tracking-tight">JK Restaurant</h1>
                 <div className="flex items-center gap-2">
@@ -140,14 +107,7 @@ function App() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {deferredPrompt && (
-                    <button
-                      onClick={handleInstallClick}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 text-sm font-bold hover:bg-brand-200 transition-colors"
-                    >
-                      <Download size={16} /> Install App
-                    </button>
-                  )}
+                  {/* PWA Install/Update handled by PwaBadge component */}
                   <button onClick={() => setDarkMode(!darkMode)} className="p-2.5 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                     {darkMode ? <Sun size={18} /> : <Moon size={18} />}
                   </button>
