@@ -16,6 +16,7 @@ export const Checkout = () => {
   const [isUploadingScreenshot, setIsUploadingScreenshot] = useState(false);
   const [utrNumber, setUtrNumber] = useState('');
   const [cookingInstructions, setCookingInstructions] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [promoInput, setPromoInput] = useState('');
 
@@ -103,14 +104,19 @@ export const Checkout = () => {
       return;
     }
 
-    if (!utrNumber || utrNumber.length < 6) {
-      alert('Please enter a valid UTR / Transaction Reference number');
+    if (!isTakeaway && !deliveryAddress) {
+      alert('Please enter your delivery address');
       return;
     }
     
     setIsPlacingOrder(true);
     try {
-      const { success, error } = await useStore.getState().placeOrder(paymentScreenshot, utrNumber, userLocation || undefined);
+      const { success, error } = await useStore.getState().placeOrder(
+        paymentScreenshot, 
+        utrNumber, 
+        isTakeaway ? undefined : deliveryAddress,
+        userLocation || undefined
+      );
       
       if (success) {
         useStore.getState().clearCart();
@@ -128,7 +134,7 @@ export const Checkout = () => {
 
   const canPlaceOrder = isTakeaway
     ? (paymentScreenshot !== null && utrNumber.length >= 6)
-    : (distance !== null && !isTooFar && paymentScreenshot !== null && utrNumber.length >= 6);
+    : (distance !== null && !isTooFar && paymentScreenshot !== null && utrNumber.length >= 6 && deliveryAddress.length > 5);
 
 
   // Effect to redirect if cart is empty on mount
@@ -176,9 +182,16 @@ export const Checkout = () => {
       {/* Delivery Check */}
       {!isTakeaway && (
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 mb-4">
-          <h3 className="font-bold flex items-center gap-2 dark:text-white mb-3 text-sm"><Navigation size={16} /> Delivery Location</h3>
+          <h3 className="text-xs font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2"><Navigation size={14} /> Delivery Address</h3>
+          <textarea
+            placeholder="Enter your complete address (House No, Building, Landmark...)"
+            value={deliveryAddress}
+            onChange={(e) => setDeliveryAddress(e.target.value)}
+            rows={3}
+            className="w-full text-sm bg-gray-50 dark:bg-gray-800 border-none rounded-lg p-3 outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-gray-200 resize-none"
+          />
           {distance === null ? (
-            <div>
+            <div className="mt-4">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Check if you're within our {MAX_DELIVERY_RADIUS_KM}km delivery zone.</p>
               <button
                 onClick={handleLocate}
@@ -190,7 +203,7 @@ export const Checkout = () => {
               {geoError && <p className="text-xs text-red-500 mt-2">{geoError}</p>}
             </div>
           ) : (
-            <div className={`p-4 rounded-xl ${isTooFar ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50' : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50'}`}>
+            <div className={`mt-4 p-4 rounded-xl ${isTooFar ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50' : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50'}`}>
               <p className={`font-bold text-sm ${isTooFar ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
                 📍 Distance: {distance.toFixed(1)} km
               </p>

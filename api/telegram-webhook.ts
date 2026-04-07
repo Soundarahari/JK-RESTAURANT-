@@ -120,22 +120,27 @@ export default async function handler(req: any, res: any) {
         const orderId = data.replace('prepare_', '');
 
         // 1. Update Supabase order status to 'preparing'
-        const { error: dbError } = await supabase
+        const { data: orderData, error: dbError } = await supabase
           .from('orders')
           .update({ status: 'preparing' })
-          .eq('id', orderId);
+          .eq('id', orderId)
+          .select('*')
+          .single();
 
-        if (dbError) {
+        if (dbError || !orderData) {
           console.error('Supabase update error (preparing):', dbError);
           await answerCallbackQuery(callbackQueryId, '❌ DB update failed');
           return res.status(200).send('OK');
         }
 
-        // 2. Edit the Telegram message to show "Preparing" status + "Food Ready" button
+        // 2. Rebuild the full message to preserve details for the manager
+        const itemsList = orderData.items.map((item: any) => `• ${item.quantity}x ${item.name}`).join('\n');
+        const updatedMessage = `*🟡 Order #${orderId.slice(0, 8)}*\n━━━━━━━━━━━━━━━━━━━━\n*Customer:* ${orderData.user_name}\n*Phone:* ${orderData.user_phone}\n*Mode:* ${orderData.order_mode === 'takeaway' ? '🥡 Takeaway' : '🛵 Delivery'}\n\n*Items:*\n${itemsList}\n\n*Total:* ₹${orderData.total_amount}\n━━━━━━━━━━━━━━━━━━━━\n*Status:* 🟡 Preparing\n\n_Kitchen is working on this order..._`;
+
         await updateTelegramMessage(
           chatId,
           messageId,
-          `*🟡 Order #${orderId.slice(0, 8)}*\n━━━━━━━━━━━━━━━━━━━━\n*Status:* 🟡 Preparing\n\n_Kitchen is working on this order..._`,
+          updatedMessage,
           [[{ text: '✅ Food Ready (Send to Driver)', callback_data: `ready_${orderId}` }]]
         );
 
@@ -147,51 +152,39 @@ export default async function handler(req: any, res: any) {
         const orderId = data.replace('ready_', '');
 
         // 1. Update Supabase order status to 'ready'
-        const { error: dbError } = await supabase
+        const { data: orderData, error: dbError } = await supabase
           .from('orders')
           .update({ status: 'ready' })
-          .eq('id', orderId);
+          .eq('id', orderId)
+          .select('*')
+          .single();
 
-        if (dbError) {
+        if (dbError || !orderData) {
           console.error('Supabase update error (ready):', dbError);
           await answerCallbackQuery(callbackQueryId, '❌ DB update failed');
           return res.status(200).send('OK');
         }
 
-        // 2. Edit Telegram message to show "Ready for Pickup" (remove buttons)
-        await updateTelegramMessage(
-          chatId,
-          messageId,
-          `*🟢 Order #${orderId.slice(0, 8)}*\n━━━━━━━━━━━━━━━━━━━━\n*Status:* 🟢 Ready for Pickup\n\n_Waiting for driver to pick up..._`,
-          []
-        );
+        // 2. Rebuild full message for manager (remove buttons)
+        const itemsList = orderData.items.map((item: any) => `• ${item.quantity}x ${item.name}`).join('\n');
+        const updatedMessage = `*🟢 Order #${orderId.slice(0, 8)}*\n━━━━━━━━━━━━━━━━━━━━\n*Customer:* ${orderData.user_name}\n*Phone:* ${orderData.user_phone}\n*Mode:* ${orderData.order_mode === 'takeaway' ? '🥡 Takeaway' : '🛵 Delivery'}\n\n*Items:*\n${itemsList}\n\n*Total:* ₹${orderData.total_amount}\n━━━━━━━━━━━━━━━━━━━━\n*Status:* 🟢 Ready for Pickup\n\n_Waiting for driver to pick up..._`;
 
-        // 3. Send delivery message directly to the Drivers Telegram group
+        await updateTelegramMessage(chatId, messageId, updatedMessage, []);
+
+        // 3. Send enhanced delivery message directly to the Drivers Telegram group
         const driverGroupChatId = process.env.TELEGRAM_DRIVER_GROUP_CHAT_ID;
-        console.log('[DRIVER NOTIFY] TELEGRAM_DRIVER_GROUP_CHAT_ID =', driverGroupChatId ?? 'UNDEFINED');
+        if (driverGroupChatId) {
+          const driverMessage = `🚨 *NEW DELIVERY JOB!* 🚨\n\n*Order:* #${orderData.id.slice(0, 8)}\n*Customer:* ${orderData.user_name}\n*Phone:* ${orderData.user_phone}\n*Address:* ${orderData.delivery_address || 'N/A'}\n*Total:* ₹${orderData.total_amount}\n\n*Driver, click here to start delivery:*\nhttps://jk-restaurant-dwdp.vercel.app/driver/${orderId}`;
 
-        if (!driverGroupChatId) {
-          console.error('[DRIVER NOTIFY] ❌ TELEGRAM_DRIVER_GROUP_CHAT_ID is not set! Cannot notify drivers.');
-        } else {
-          const driverMessage = `🚨 Order #${orderId} is Ready for Pickup!\n\nDriver, click here to start delivery:\nhttps://jk-restaurant-dwdp.vercel.app/driver/${orderId}`;
-
-          console.log('[DRIVER NOTIFY] Sending message to group chat:', driverGroupChatId);
-
-          const driverRes = await fetch(`${TELEGRAM_API}/sendMessage`, {
+          await fetch(`${TELEGRAM_API}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               chat_id: driverGroupChatId,
               text: driverMessage,
+              parse_mode: 'Markdown',
             }),
           });
-
-          if (driverRes.ok) {
-            console.log('[DRIVER NOTIFY] ✅ Message sent successfully to driver group.');
-          } else {
-            const errBody = await driverRes.text();
-            console.error('[DRIVER NOTIFY] ❌ Telegram API error:', driverRes.status, errBody);
-          }
         }
 
         await answerCallbackQuery(callbackQueryId, '✅ Driver notified!');

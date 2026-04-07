@@ -21,6 +21,7 @@ export interface Order {
   payment_screenshot_url: string | null;
   utr_number: string | null;
   created_at: string;
+  delivery_address?: string;
   delivery_location?: { lat: number, lng: number } | null;
 }
 
@@ -108,7 +109,7 @@ interface AppState {
   fetchOrders: () => Promise<void>;
   fetchCustomers: () => Promise<void>;
   fetchUserOrders: (email: string) => Promise<void>;
-  placeOrder: (paymentScreenshot: string, utrNumber: string, delivery_location?: {lat: number, lng: number}) => Promise<{ success: boolean; error?: string }>;
+  placeOrder: (paymentScreenshot: string, utrNumber: string, delivery_address?: string, delivery_location?: {lat: number, lng: number}) => Promise<{ success: boolean; error?: string }>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
   getTotalPrice: () => number;
   userPhones: Record<string, string>;
@@ -198,11 +199,13 @@ export const useStore = create<AppState>()(
       clearOrders: async () => {
         set({ isLoading: true });
         try {
-          // Use gte on created_at to match all rows (every timestamp is >= epoch start)
-          const { error } = await supabase.from('orders').delete().gte('created_at', '1970-01-01');
+          // Permanently delete only completed or cancelled orders as requested
+          const { error } = await supabase.from('orders').delete().in('status', ['completed', 'cancelled']);
           if (error) throw error;
           
-          set({ adminOrders: [], orders: [], isLoading: false });
+          // Refetch orders to sync local state
+          await get().fetchOrders();
+          set({ isLoading: false });
           return { success: true };
         } catch (err: any) {
           console.error('Clear orders error:', err);
@@ -393,7 +396,7 @@ export const useStore = create<AppState>()(
           console.error('Error fetching user orders:', error);
         }
       },
-      placeOrder: async (paymentScreenshot, utrNumber, delivery_location) => {
+      placeOrder: async (paymentScreenshot, utrNumber, delivery_address, delivery_location) => {
         try {
           const { user, cart, orderMode, getTotalPrice, lastOrderTime } = get();
           if (!user || cart.length === 0) return { success: false, error: 'No user or empty cart' };
@@ -415,6 +418,7 @@ export const useStore = create<AppState>()(
             status: 'pending',
             payment_screenshot_url: paymentScreenshot || null,
             utr_number: utrNumber || null,
+            delivery_address: delivery_address || null,
             delivery_location: delivery_location || null,
           };
 
