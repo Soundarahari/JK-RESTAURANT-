@@ -208,9 +208,19 @@ export const Checkout = () => {
               <select
                 value={selectedCollege}
                 onChange={(e) => {
-                  setSelectedCollege(e.target.value);
-                  if (e.target.value && e.target.value !== 'Other (Use GPS / Map Location)') {
-                    setDeliveryAddress(prev => prev.includes(' - ') ? prev : e.target.value + ' - ');
+                  const newCollege = e.target.value;
+                  setSelectedCollege(newCollege);
+                  
+                  if (newCollege && newCollege !== 'Other (Use GPS / Map Location)') {
+                    setDeliveryAddress(prev => {
+                      if (prev.includes(' - ')) {
+                        const parts = prev.split(' - ');
+                        // Keep everything after the first hyphen
+                        const remaining = parts.slice(1).join(' - ');
+                        return newCollege + ' - ' + remaining;
+                      }
+                      return newCollege + ' - ' + prev;
+                    });
                   }
                 }}
                 className="w-full text-sm bg-gray-50 dark:bg-gray-800 border-none rounded-lg p-3 outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-gray-200 font-bold"
