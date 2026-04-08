@@ -57,8 +57,13 @@ export default async function handler(req: any, res: any) {
     }
 
     // Fetch current state to avoid duplicate emails/notifications on GPS loops
-    const { data: currentData } = await supabase.from('orders').select('status, user_name, user_email').eq('id', orderId).single();
-    const isStatusChanging = currentData?.status !== newStatus;
+    const { data: orderData } = await supabase
+      .from('orders')
+      .select('status, user_name, user_email, user_phone, delivery_address, items, total_amount, order_mode, telegram_manager_msg_id, telegram_driver_msg_id')
+      .eq('id', orderId)
+      .single();
+    
+    const isStatusChanging = orderData?.status !== newStatus;
 
     const { error: dbError } = await supabase
       .from('orders')
@@ -73,16 +78,22 @@ export default async function handler(req: any, res: any) {
     console.log(`[DRIVER-UPDATE] ✅ Order ${orderId} updated to ${newStatus}`);
 
     // Send Out for Delivery Email and Telegram Notification ONLY if status just changed
-    if (newStatus === 'out_for_delivery' && isStatusChanging) {
-      try {
-        if (currentData?.user_email && process.env.GMAIL_USER) {
+    if (isStatusChanging && orderData) {
+      const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+      const shortId = orderId.slice(0, 8);
+      const itemsList = orderData.items.map((item: any) => `• ${item.quantity}x ${item.name}`).join('\n');
+      const address = orderData.delivery_address || 'N/A';
+      
+      // 💌 1. Send Email (Out for Delivery Only)
+      if (newStatus === 'out_for_delivery' && orderData.user_email && process.env.GMAIL_USER) {
+        try {
           const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
           });
           await transporter.sendMail({
             from: `"JK Restaurant" <${process.env.GMAIL_USER}>`,
-            to: currentData.user_email,
+            to: orderData.user_email,
             subject: `Your Order is Out for Delivery! 🛵 - JK Restaurant`,
             html: `
               <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 40px 20px; background-color: #f9fafb;">
@@ -91,7 +102,7 @@ export default async function handler(req: any, res: any) {
                     <h1 style="color: white; margin: 0; font-size: 24px;">Out for Delivery! 🛵</h1>
                   </div>
                   <div style="padding: 30px;">
-                    <p style="font-size: 16px; color: #374151;">Hi <strong>${currentData.user_name}</strong>,</p>
+                    <p style="font-size: 16px; color: #374151;">Hi <strong>${orderData.user_name}</strong>,</p>
                     <p style="color: #4b5563; line-height: 1.6; font-size: 15px;">Your delicious food is on its way to you! You can track your driver live in the JK Restaurant app.</p>
                     <div style="text-align: center; margin-top: 30px;">
                       <a href="https://jk-restaurant-dwdp.vercel.app/track/${orderId}" style="display: inline-block; background-color: #ea580c; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold;">Track Driver Live</a>
@@ -101,54 +112,53 @@ export default async function handler(req: any, res: any) {
               </div>
             `
           });
-          console.log(`Out for Delivery email sent to ${currentData.user_email}`);
+        } catch (e) {
+          console.error("Failed to send Out for Delivery email:", e);
         }
-        
-        // Notify Manager Bot
-        if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-          const managerMsg = `🛵 *Driver Picked Up Delivery!*\n\n*Order:* #${orderId.slice(0, 8)}\n*Customer:* ${currentData?.user_name || 'N/A'}\n*Driver is now on the way.*`;
-          await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: managerMsg, parse_mode: 'Markdown' })
-          });
-        }
-
-        // Notify Driver Group
-        if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_DRIVER_GROUP_CHAT_ID) {
-          const driverGroupMsg = `✅ *ORDER PICKED UP*\n\nOrder #${orderId.slice(0, 8)} for ${currentData?.user_name} has been accepted and is being delivered.`;
-          await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: process.env.TELEGRAM_DRIVER_GROUP_CHAT_ID, text: driverGroupMsg, parse_mode: 'Markdown' })
-          });
-        }
-      } catch (e) {
-        console.error("Failed to send Out for Delivery notifications:", e);
       }
-    } else if (newStatus === 'completed' && isStatusChanging) {
-      try {
-        // Notify Manager Bot
-        if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-          const managerMsg = `🏆 *Delivery Completed!*\n\n*Order:* #${orderId.slice(0, 8)}\n*Customer:* ${currentData?.user_name || 'N/A'}\n*Successfully delivered.*`;
-          await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: managerMsg, parse_mode: 'Markdown' })
-          });
-        }
 
-        // Notify Driver Group
-        if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_DRIVER_GROUP_CHAT_ID) {
-          const driverGroupMsg = `🏁 *DELIVERY COMPLETE*\n\nOrder #${orderId.slice(0, 8)} has been delivered! Job well done.`;
-          await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: process.env.TELEGRAM_DRIVER_GROUP_CHAT_ID, text: driverGroupMsg, parse_mode: 'Markdown' })
-          });
-        }
-      } catch (e) {
-        console.error("Failed to send Completed notification:", e);
+      // 🤖 2. Update Telegram - Manager Bot
+      const managerMsgId = orderData.telegram_manager_msg_id;
+      const managerChatId = process.env.TELEGRAM_CHAT_ID;
+      if (managerMsgId && managerChatId) {
+        const emoji = newStatus === 'completed' ? '🏆' : '🛵';
+        const statusText = newStatus === 'completed' ? '🏆 Completed' : '🛵 Out for Delivery';
+        const footerNote = newStatus === 'completed' ? '_Order has been successfully delivered._' : '_Driver is now on the way to the customer._';
+        
+        const updatedManagerMessage = `${emoji} *Order #${shortId}*\n━━━━━━━━━━━━━━━━━━━━\n*Customer:* ${orderData.user_name}\n*Phone:* ${orderData.user_phone}\n*Address:* 📍 ${address}\n*Mode:* 🛵 Delivery\n\n*Items:*\n${itemsList}\n\n*Total:* ₹${orderData.total_amount}\n━━━━━━━━━━━━━━━━━━━━\n*Status:* ${statusText}\n\n${footerNote}`;
+
+        await fetch(`${TELEGRAM_API}/editMessageText`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: managerChatId,
+            message_id: parseInt(managerMsgId),
+            text: updatedManagerMessage,
+            parse_mode: 'Markdown'
+          }),
+        });
+      }
+
+      // 🤖 3. Update Telegram - Driver Group
+      const driverMsgId = orderData.telegram_driver_msg_id;
+      const driverChatId = process.env.TELEGRAM_DRIVER_GROUP_CHAT_ID;
+      if (driverMsgId && driverChatId) {
+        const emoji = newStatus === 'completed' ? '🏁' : '✅';
+        const title = newStatus === 'completed' ? 'DELIVERY COMPLETE' : 'ORDER PICKED UP';
+        const statusText = newStatus === 'completed' ? 'Order delivered! Job well done.' : 'Order accepted and is being delivered.';
+        
+        const updatedDriverMessage = `${emoji} *${title}*\n\n*Order:* #${shortId}\n*Customer:* ${orderData.user_name}\n*Status:* ${statusText}`;
+
+        await fetch(`${TELEGRAM_API}/editMessageText`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: driverChatId,
+            message_id: parseInt(driverMsgId),
+            text: updatedDriverMessage,
+            parse_mode: 'Markdown'
+          }),
+        });
       }
     }
 

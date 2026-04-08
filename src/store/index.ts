@@ -23,6 +23,8 @@ export interface Order {
   created_at: string;
   delivery_address?: string;
   delivery_location?: { lat: number, lng: number } | null;
+  telegram_manager_msg_id?: string | null;
+  telegram_driver_msg_id?: string | null;
 }
 
 // Known student email domains — if user's email ends with one of these, they're a student

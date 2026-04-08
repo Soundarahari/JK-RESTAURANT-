@@ -1,4 +1,12 @@
 import nodemailer from 'nodemailer';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
+
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  auth: { autoRefreshToken: false, persistSession: false }
+});
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -151,6 +159,16 @@ export default async function handler(req: any, res: any) {
         if (!telegramRes.ok) {
           console.error(`Telegram API responded with status ${telegramRes.status}`);
         } else {
+          const telegramData = await telegramRes.json();
+          const messageId = telegramData.result?.message_id;
+          
+          if (messageId) {
+            console.log(`Telegram notification sent. Msg ID: ${messageId}. Saving to order ${orderId}...`);
+            await supabase
+              .from('orders')
+              .update({ telegram_manager_msg_id: messageId.toString() })
+              .eq('id', orderId);
+          }
           console.log(`Telegram notification successfully sent for order ${orderId}`);
         }
       } else {

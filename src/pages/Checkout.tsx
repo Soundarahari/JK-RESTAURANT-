@@ -9,7 +9,7 @@ export const Checkout = () => {
   const { cart, user, orderMode, setOrderMode, getTotalPrice, promos, appliedPromoCode, setAppliedPromoCode } = useStore();
   const navigate = useNavigate();
   const [distance, setDistance] = useState<number | null>(null);
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [geoError, setGeoError] = useState('');
   const [isLocating, setIsLocating] = useState(false);
   const [paymentScreenshot, setPaymentScreenshot] = useState<string | null>(null);
@@ -22,11 +22,11 @@ export const Checkout = () => {
   const [selectedCollege, setSelectedCollege] = useState('');
 
   const COLLEGES = [
-    { name: "Excel Engineering College", lat: 11.446026, lng: 77.768956 },
-    { name: "Vivekanandha College of Engineering for Women", lat: 11.357938, lng: 77.943850 },
-    { name: "SSM College Of Engineering", lat: 11.440000, lng: 77.740000 },
-    { name: "JKKN College of Engineering and Technology", lat: 11.440000, lng: 77.730000 },
-    { name: "JKKM Educational Institutions Campus", lat: 11.450000, lng: 77.730000 },
+    { name: "Excel INSTITUTIONS", lat: 11.449777022281602, lng: 77.77186479045226 },
+    { name: "Vivekanandha Womens College", lat: 11.455741, lng: 77.787932 },
+    { name: "SSM College Of Engineering", lat: 11.446155728908327, lng: 77.74304949860891 },
+    { name: "JKKN INSTITUTIONS", lat: 11.444208686451457, lng: 77.73152736996532 },
+    { name: "JKKM Educational Institutions", lat: 11.445028710223212, lng: 77.72766349669432 },
     { name: "Other (Use GPS / Map Location)", lat: null, lng: null }
   ];
 
@@ -42,11 +42,11 @@ export const Checkout = () => {
     setIsUploadingScreenshot(true);
     const fileExt = file.name.split('.').pop();
     const filePath = `payment-proofs/${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
-    
+
     const { error: uploadError } = await supabase.storage
       .from('images')
       .upload(filePath, file, { cacheControl: '3600', upsert: false });
-    
+
     if (uploadError) {
       console.error('Upload error:', uploadError);
       // Fallback: use object URL locally if storage upload fails
@@ -79,7 +79,7 @@ export const Checkout = () => {
   const isTooFar = !isTakeaway && !activeCollege && distance !== null && distance > MAX_DELIVERY_RADIUS_KM;
   // If college selected, flat ₹20 delivery fee or similar, but for now logic is same
   const deliveryFee = isTakeaway ? 0 : ((distance !== null && distance <= MAX_DELIVERY_RADIUS_KM && distance > 3) ? 40 : 20);
-  
+
   const grandTotal = itemTotal + (isTakeaway ? 0 : platformFee) + gstAndCharges + deliveryFee;
 
   const handleLocate = () => {
@@ -111,7 +111,7 @@ export const Checkout = () => {
       navigate('/profile');
       return;
     }
-    
+
     if (!paymentScreenshot) {
       alert('Please upload payment screenshot');
       return;
@@ -121,9 +121,9 @@ export const Checkout = () => {
       alert('Please enter your delivery address');
       return;
     }
-    
+
     setIsPlacingOrder(true);
-    
+
     let finalLocation = userLocation || undefined;
     const selectedCollegeData = COLLEGES.find(c => c.name === selectedCollege);
     if (selectedCollegeData && selectedCollegeData.lat && selectedCollegeData.lng) {
@@ -132,12 +132,12 @@ export const Checkout = () => {
 
     try {
       const { success, error } = await useStore.getState().placeOrder(
-        paymentScreenshot, 
-        utrNumber, 
+        paymentScreenshot,
+        utrNumber,
         isTakeaway ? undefined : deliveryAddress,
         finalLocation
       );
-      
+
       if (success) {
         useStore.getState().clearCart();
         navigate('/profile');
@@ -179,21 +179,19 @@ export const Checkout = () => {
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-1.5 mb-4 flex gap-1.5">
         <button
           onClick={() => setOrderMode('delivery')}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${
-            orderMode === 'delivery'
-              ? 'bg-brand-500 text-white shadow-md'
-              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-          }`}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${orderMode === 'delivery'
+            ? 'bg-brand-500 text-white shadow-md'
+            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+            }`}
         >
           <ShoppingBag size={16} /> Delivery
         </button>
         <button
           onClick={() => setOrderMode('takeaway')}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${
-            orderMode === 'takeaway'
-              ? 'bg-brand-500 text-white shadow-md'
-              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-          }`}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${orderMode === 'takeaway'
+            ? 'bg-brand-500 text-white shadow-md'
+            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+            }`}
         >
           <Package size={16} /> Take Away
         </button>
@@ -203,7 +201,7 @@ export const Checkout = () => {
       {!isTakeaway && (
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 mb-4">
           <h3 className="text-xs font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2"><Navigation size={14} /> Delivery Address</h3>
-          
+
           {isStudentVerified && (
             <div className="mb-4">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Select College</label>
@@ -298,7 +296,7 @@ export const Checkout = () => {
                     {appliedPromoCode.discount_type === 'percentage' ? `${appliedPromoCode.discount_value}% OFF` : `₹${appliedPromoCode.discount_value} OFF`} active.
                   </p>
                 </div>
-                <button 
+                <button
                   onClick={() => setAppliedPromoCode(null)}
                   className="text-red-500 font-bold text-xs uppercase hover:underline"
                 >
@@ -355,7 +353,7 @@ export const Checkout = () => {
             <span>₹{gstAndCharges}</span>
           </div>
         </div>
-        
+
         <div className="pt-4 border-t border-gray-100 dark:border-gray-800 flex justify-between font-black text-lg text-gray-900 dark:text-white">
           <span>Grand Total</span>
           <span>₹{grandTotal}</span>
@@ -376,7 +374,7 @@ export const Checkout = () => {
 
         <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-3 mb-6">
           <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{UPI_ID}</p>
-          <button 
+          <button
             onClick={() => {
               navigator.clipboard.writeText(UPI_ID);
               alert('UPI ID copied!');
@@ -430,7 +428,7 @@ export const Checkout = () => {
                     <CheckCircle2 size={16} /> Screenshot Uploaded
                   </p>
                 </div>
-                <button 
+                <button
                   onClick={() => setPaymentScreenshot(null)}
                   className="absolute top-2 right-2 bg-white/80 dark:bg-gray-900/80 p-1.5 rounded-lg text-red-500 shadow-sm"
                 >
@@ -452,11 +450,10 @@ export const Checkout = () => {
           <button
             onClick={handlePlaceOrder}
             disabled={!canPlaceOrder || isPlacingOrder}
-            className={`flex-1 h-12 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
-              !canPlaceOrder || isPlacingOrder
-                ? 'bg-gray-100 dark:bg-gray-800 text-gray-300'
-                : 'bg-brand-500 text-white shadow-xl shadow-brand-500/20'
-            }`}
+            className={`flex-1 h-12 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${!canPlaceOrder || isPlacingOrder
+              ? 'bg-gray-100 dark:bg-gray-800 text-gray-300'
+              : 'bg-brand-500 text-white shadow-xl shadow-brand-500/20'
+              }`}
           >
             {isPlacingOrder ? 'Processing...' : 'Place Order →'}
           </button>
