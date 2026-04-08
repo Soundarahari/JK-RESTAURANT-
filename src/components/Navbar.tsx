@@ -1,4 +1,4 @@
-import { ShoppingCart, User, Home, ShieldAlert } from 'lucide-react';
+import { ShoppingCart, User, Home, ShieldAlert, Navigation } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useStore, isAdmin } from '../store';
 
@@ -14,6 +14,7 @@ export const Navbar = () => {
     { to: '/', icon: Home, label: 'Menu' },
     { to: '/cart', icon: ShoppingCart, label: 'Cart', badge: cartCount },
     { to: '/profile', icon: User, label: 'Profile' },
+    ...(user?.is_driver ? [{ to: '/driver-jobs', icon: Navigation, label: 'Jobs' }] : []),
     ...(userIsAdmin ? [{ to: '/admin', icon: ShieldAlert, label: 'Admin' }] : []),
   ];
 

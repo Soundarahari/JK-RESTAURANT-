@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useStore } from '../store';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Navigation, Phone, Package, CheckCircle2, MapPin } from 'lucide-react';
@@ -40,6 +41,8 @@ interface OrderData {
 
 export const DriverDelivery = () => {
   const { orderId } = useParams<{ orderId: string }>();
+  const navigate = useNavigate();
+  const { user } = useStore();
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +52,14 @@ export const DriverDelivery = () => {
   const watchIdRef = useRef<number | null>(null);
   const updateIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const latestPosRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  // Access Control
+  useEffect(() => {
+    if (loading) return;
+    if (!user?.is_driver) {
+      navigate('/');
+    }
+  }, [user, navigate, loading]);
 
   // Fetch order from Supabase
   useEffect(() => {

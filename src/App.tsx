@@ -8,6 +8,7 @@ import { Checkout } from './pages/Checkout';
 import { Admin } from './pages/Admin';
 import { TrackOrder } from './pages/TrackOrder';
 import { DriverDelivery } from './pages/DriverDelivery';
+import { DriverJobs } from './pages/DriverJobs';
 import { CategoryView } from './pages/CategoryView';
 import { useState, useEffect } from 'react';
 import { Moon, Sun, User } from 'lucide-react';
@@ -146,6 +147,7 @@ function App() {
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/admin" element={<Admin />} />
+                  <Route path="/driver-jobs" element={<DriverJobs />} />
                   <Route path="/track/:orderId" element={<TrackOrder />} />
                 </Routes>
               </main>

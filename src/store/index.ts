@@ -25,6 +25,8 @@ export interface Order {
   delivery_location?: { lat: number, lng: number } | null;
   telegram_manager_msg_id?: string | null;
   telegram_driver_msg_id?: string | null;
+  driver_id?: string | null;
+  driver_name?: string | null;
 }
 
 // Known student email domains — if user's email ends with one of these, they're a student
@@ -48,6 +50,7 @@ export interface UserProfile {
   phone: string;
   avatar_url?: string;
   is_student: boolean;
+  is_driver: boolean;
   college_name?: string;
 }
 
@@ -66,6 +69,7 @@ export interface Customer {
   phone: string;
   avatar_url?: string;
   is_student: boolean;
+  is_driver: boolean;
   created_at: string;
   last_login: string;
 }
@@ -120,6 +124,8 @@ interface AppState {
   error: string | null;
   seedDatabase: () => Promise<{ success: boolean; error?: string }>;
   clearOrders: () => Promise<{ success: boolean; error?: string }>;
+  toggleDriverRole: (email: string, isDriver: boolean) => Promise<void>;
+  acceptJob: (orderId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const useStore = create<AppState>()(
@@ -243,12 +249,13 @@ export const useStore = create<AppState>()(
         const state = get();
         let existingPhone = state.userPhones[email] || '';
         
-        // Try to fetch existing phone from database if local state is missing
-        if (!existingPhone) {
-          const { data } = await supabase.from('customers').select('phone').eq('email', email).single();
+        // Try to fetch existing profile from database if local state is missing
+        if (true) { // Always fetch to get latest roles
+          const { data } = await supabase.from('customers').select('phone, is_driver').eq('email', email).single();
           if (data?.phone) {
             existingPhone = data.phone;
           }
+          var isDriver = data?.is_driver || false;
         }
         
         const studentDetected = isStudentEmail(email);
@@ -261,6 +268,7 @@ export const useStore = create<AppState>()(
             phone: existingPhone,
             avatar_url: avatarUrl,
             is_student: studentDetected,
+            is_driver: isDriver,
           }
         });
 
@@ -534,6 +542,48 @@ export const useStore = create<AppState>()(
         }
         
         return subtotal;
+      },
+      toggleDriverRole: async (email, isDriver) => {
+        const { error } = await supabase.from('customers').update({ is_driver: isDriver }).eq('email', email);
+        if (!error) {
+          set((state) => ({ 
+            customers: state.customers.map(c => c.email === email ? { ...c, is_driver: isDriver } : c),
+            user: state.user?.email === email ? { ...state.user, is_driver: isDriver } : state.user
+          }));
+        }
+      },
+      acceptJob: async (orderId) => {
+        const { user } = get();
+        if (!user) return { success: false, error: 'Must be logged in' };
+        
+        const { data, error } = await supabase
+          .from('orders')
+          .update({ 
+            status: 'out_for_delivery', 
+            driver_id: user.id,
+            driver_name: user.full_name
+          })
+          .eq('id', orderId)
+          .eq('status', 'ready') // Ensure it's still available
+          .select();
+
+        if (error) return { success: false, error: error.message };
+        if (!data || data.length === 0) return { success: false, error: 'Order already taken or unavailable' };
+
+        // Trigger notification
+        try {
+          fetch('/api/driver-update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, newStatus: 'out_for_delivery' })
+          });
+        } catch (e) { console.error('Accept job notification error:', e); }
+
+        set((state) => ({
+          adminOrders: state.adminOrders.map(o => o.id === orderId ? { ...o, status: 'out_for_delivery', driver_id: user.id, driver_name: user.full_name } : o)
+        }));
+
+        return { success: true };
       }
     }),
     {

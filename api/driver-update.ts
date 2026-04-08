@@ -65,17 +65,15 @@ export default async function handler(req: any, res: any) {
     
     // Fetch Telegram IDs separately in case the columns don't exist yet
     let managerMsgId = null;
-    let driverMsgId = null;
     try {
       const { data: tgData } = await supabase
         .from('orders')
-        .select('telegram_manager_msg_id, telegram_driver_msg_id')
+        .select('telegram_manager_msg_id')
         .eq('id', orderId)
         .single();
       managerMsgId = tgData?.telegram_manager_msg_id;
-      driverMsgId = tgData?.telegram_driver_msg_id;
     } catch (e) {
-      console.warn('[DRIVER-UPDATE] ⚠️ Could not fetch Telegram message IDs. Columns might be missing.', e);
+      console.warn('[DRIVER-UPDATE] ⚠️ Could not fetch Telegram message IDs.', e);
     }
     
     if (fetchError) {
@@ -125,7 +123,7 @@ export default async function handler(req: any, res: any) {
               service: 'gmail',
               auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
             });
-            const info = await transporter.sendMail({
+            await transporter.sendMail({
               from: `"JK Restaurant" <${process.env.GMAIL_USER}>`,
               to: orderData.user_email,
               subject: `Your Order is Out for Delivery! 🛵 - JK Restaurant`,
@@ -146,15 +144,9 @@ export default async function handler(req: any, res: any) {
                 </div>
               `
             });
-            console.log(`[DRIVER-UPDATE] Email sent successfully: ${info.messageId}`);
           } catch (e) {
             console.error("[DRIVER-UPDATE] ❌ Failed to send Out for Delivery email:", e);
           }
-        } else {
-          console.warn('[DRIVER-UPDATE] ⚠️ Skipping email: customer email or GMAIL_USER missing.', { 
-            email: orderData.user_email, 
-            hasGmailUser: !!process.env.GMAIL_USER 
-          });
         }
       }
 
@@ -192,43 +184,6 @@ export default async function handler(req: any, res: any) {
               body: JSON.stringify({ chat_id: managerChatId, text: updatedManagerMessage, parse_mode: 'Markdown' }),
             });
           } catch (e) { console.error('[DRIVER-UPDATE] Manager fallback failed:', e); }
-        }
-      }
-
-      // 🤖 3. Update Telegram - Driver Group
-      const driverChatId = process.env.TELEGRAM_DRIVER_GROUP_CHAT_ID;
-      if (driverChatId) {
-        const emoji = newStatus === 'completed' ? '✅' : '🛵';
-        const title = newStatus === 'completed' ? 'DELIVERY COMPLETE' : 'ORDER PICKED UP';
-        const statusText = newStatus === 'completed' ? 'Order delivered! Job well done.' : 'Order accepted and is being delivered.';
-        
-        const updatedDriverMessage = `${emoji} *${title}*\n━━━━━━━━━━━━━━━━━━━━\n*Order:* #${shortId}\n*Customer:* ${orderData.user_name}\n*Phone:* ${orderData.user_phone}\n*Address:* 📍 ${address}\n\n*Items:*\n${itemsList}\n\n*Total:* ₹${orderData.total_amount}\n━━━━━━━━━━━━━━━━━━━━\n*Status:* ${statusText}`;
-
-        let editSucceeded = false;
-        if (driverMsgId) {
-          try {
-            const editRes = await fetch(`${TELEGRAM_API}/editMessageText`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: driverChatId,
-                message_id: parseInt(driverMsgId),
-                text: updatedDriverMessage,
-                parse_mode: 'Markdown'
-              }),
-            });
-            if (editRes.ok) editSucceeded = true;
-          } catch (e) { console.error('[DRIVER-UPDATE] Driver edit error:', e); }
-        }
-
-        if (!editSucceeded) {
-          try {
-            await fetch(`${TELEGRAM_API}/sendMessage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: driverChatId, text: updatedDriverMessage, parse_mode: 'Markdown' }),
-            });
-          } catch (e) { console.error('[DRIVER-UPDATE] Driver fallback failed:', e); }
         }
       }
     }

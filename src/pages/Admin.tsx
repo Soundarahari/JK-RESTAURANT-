@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 
 
 export const Admin = () => {
-  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories } = useStore();
+  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories, toggleDriverRole } = useStore();
   const navigate = useNavigate();
   
   // 1. Admin Authorization check first
@@ -40,7 +40,7 @@ export const Admin = () => {
   const [newDishSubCategory, setNewDishSubCategory] = useState('Fried Rice');
   
   const [userSearch, setUserSearch] = useState('');
-  const [selectedUser, setSelectedUserDetails] = useState<{name: string, email: string, phone: string, is_student: boolean} | null>(null);
+  const [selectedUser, setSelectedUserDetails] = useState<{name: string, email: string, phone: string, is_student: boolean, is_driver: boolean} | null>(null);
   const [enlargedScreenshot, setEnlargedScreenshot] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [originalCategoryName, setOriginalCategoryName] = useState<string>('');
@@ -245,6 +245,7 @@ export const Admin = () => {
       email: c.email,
       phone: c.phone,
       is_student: c.is_student,
+      is_driver: !!c.is_driver,
       orderCount: adminOrders.filter(o => o.user_email === c.email).length
     }));
   }, [customers, adminOrders]);
@@ -818,6 +819,11 @@ export const Admin = () => {
                 <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${selectedUser.is_student ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 border border-indigo-100 dark:border-indigo-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-400 border border-gray-100 dark:border-gray-700'}`}>
                   {selectedUser.is_student ? '🎓 STUDENT' : '👤 REGULAR'}
                 </span>
+                {selectedUser.is_driver && (
+                   <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 border border-emerald-100 dark:border-emerald-800">
+                     🛵 STAFF
+                   </span>
+                )}
                 <span className="text-[10px] font-bold text-gray-400">Loyalty Member</span>
               </div>
             </div>
@@ -837,6 +843,31 @@ export const Admin = () => {
                   <Smartphone size={14} className="text-gray-300" />
                 </div>
               </div>
+
+              {/* Toggle Delivery Role */}
+              <div className="pt-6 mt-2 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex items-center justify-between p-4 bg-brand-50/30 dark:bg-brand-900/10 rounded-2xl border border-brand-100/50 dark:border-brand-900/30">
+                  <div className="flex-1">
+                    <p className="text-xs font-black text-gray-800 dark:text-white uppercase tracking-tight mb-0.5">Delivery Role</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium leading-tight">Authorize this staff member to manage delivery jobs.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer ml-4">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={selectedUser.is_driver} 
+                      onChange={async (e) => {
+                        const newStatus = e.target.checked;
+                        await toggleDriverRole(selectedUser.email, newStatus);
+                        // Local update for modal
+                        setSelectedUserDetails({ ...selectedUser, is_driver: newStatus });
+                      }} 
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-brand-500"></div>
+                  </label>
+                </div>
+              </div>
+
               <button 
                 onClick={() => setSelectedUserDetails(null)}
                 className="w-full py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-[1.5rem] font-black text-xs uppercase tracking-widest mt-4 shadow-xl active:scale-95 transition-all"
