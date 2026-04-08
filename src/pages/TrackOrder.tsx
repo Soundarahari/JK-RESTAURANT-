@@ -174,9 +174,15 @@ export const TrackOrder = () => {
   const remainingMins = Math.max(1, Math.round(15 * (1 - (progressPercent / 100))));
   
   const driverStatusText = (() => {
+    if (order?.order_mode === 'takeaway') {
+      if (orderStatus === 'pending') return 'Order received';
+      if (orderStatus === 'preparing') return 'Being prepared 👨‍🍳';
+      if (orderStatus === 'ready') return 'Ready for pickup!';
+      if (orderStatus === 'completed') return 'Order picked up!';
+    }
     if (orderStatus === 'pending') return 'Order received';
     if (orderStatus === 'preparing') return 'Being prepared 👨‍🍳';
-    if (orderStatus === 'ready') return 'Ready for pickup';
+    if (orderStatus === 'ready') return 'Ready for driver pickup';
     if (orderStatus === 'completed') return 'Delivered!';
     // out_for_delivery
     if (progressPercent < 5) return "Picking up your order";
@@ -242,20 +248,24 @@ export const TrackOrder = () => {
           
           {userLoc && (
             <>
-              <Marker position={[userLoc.lat, userLoc.lng]}>
-                <Popup>Your Location</Popup>
-              </Marker>
+              {order?.order_mode !== 'takeaway' && (
+                <Marker position={[userLoc.lat, userLoc.lng]}>
+                  <Popup>Your Location</Popup>
+                </Marker>
+              )}
               
-              {(orderStatus === 'out_for_delivery' || hasRealGPS) && (
+              {order?.order_mode !== 'takeaway' && (orderStatus === 'out_for_delivery' || hasRealGPS) && (
                 <Marker position={[driverPos.lat, driverPos.lng]} icon={deliveryIcon} zIndexOffset={1000}>
                   <Popup>{hasRealGPS ? 'Driver (Live GPS)' : 'Driver is on the way'}</Popup>
                 </Marker>
               )}
               
-              <Polyline positions={[
-                [RESTAURANT_COORDS.lat, RESTAURANT_COORDS.lng], 
-                [userLoc.lat, userLoc.lng]
-              ]} color="#10b981" weight={4} dashArray="10, 10" />
+              {order?.order_mode !== 'takeaway' && (
+                <Polyline positions={[
+                  [RESTAURANT_COORDS.lat, RESTAURANT_COORDS.lng], 
+                  [userLoc.lat, userLoc.lng]
+                ]} color="#10b981" weight={4} dashArray="10, 10" />
+              )}
             </>
           )}
         </MapContainer>
@@ -271,17 +281,21 @@ export const TrackOrder = () => {
            <div className="flex-1 pr-4">
              <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight leading-none mb-2">{driverStatusText}</h3>
              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-               {orderStatus === 'out_for_delivery' && progressPercent < 100 
-                 ? <><span className="text-emerald-500 flex items-center gap-1"><Clock size={12} className="animate-pulse" /> ~{remainingMins} MINS</span> {hasRealGPS ? ' • LIVE GPS' : ''}</>
-                 : orderStatus === 'completed' 
-                   ? 'ORDER SUCCESSFULLY DELIVERED'
-                   : orderStatus === 'pending'
-                     ? 'WAITING FOR KITCHEN CONFIRMATION'
-                     : orderStatus === 'preparing'
-                       ? 'CHEFS ARE CRAFTING YOUR MEAL'
-                       : orderStatus === 'ready'
-                         ? 'WAITING FOR DRIVER PICKUP'
-                         : 'ORDER DELIVERED'
+               {order?.order_mode === 'takeaway'
+                 ? (orderStatus === 'completed' ? 'ORDER WAS PICKED UP' :
+                    orderStatus === 'ready' ? 'READY AT RESTAURANT FOR PICKUP' :
+                    orderStatus === 'preparing' ? 'CHEFS ARE CRAFTING YOUR MEAL' : 'WAITING FOR KITCHEN CONFIRMATION')
+                 : (orderStatus === 'out_for_delivery' && progressPercent < 100 
+                   ? <><span className="text-emerald-500 flex items-center gap-1"><Clock size={12} className="animate-pulse" /> ~{remainingMins} MINS</span> {hasRealGPS ? ' • LIVE GPS' : ''}</>
+                   : orderStatus === 'completed' 
+                     ? 'ORDER SUCCESSFULLY DELIVERED'
+                     : orderStatus === 'pending'
+                       ? 'WAITING FOR KITCHEN CONFIRMATION'
+                       : orderStatus === 'preparing'
+                         ? 'CHEFS ARE CRAFTING YOUR MEAL'
+                         : orderStatus === 'ready'
+                           ? 'WAITING FOR DRIVER PICKUP'
+                           : 'ORDER DELIVERED')
                }
              </p>
            </div>
@@ -306,11 +320,13 @@ export const TrackOrder = () => {
                  'bg-gradient-to-r from-brand-400 via-brand-500 to-emerald-500'
                 }`}
                 style={{ width: `${
-                  orderStatus === 'pending' ? 10 :
-                  orderStatus === 'preparing' ? 30 :
-                  orderStatus === 'ready' ? 50 :
-                  orderStatus === 'completed' ? 100 :
-                  Math.max(55, progressPercent)
+                  order?.order_mode === 'takeaway' 
+                    ? (orderStatus === 'pending' ? 20 : orderStatus === 'preparing' ? 60 : 100)
+                    : (orderStatus === 'pending' ? 10 :
+                       orderStatus === 'preparing' ? 30 :
+                       orderStatus === 'ready' ? 50 :
+                       orderStatus === 'completed' ? 100 :
+                       Math.max(55, progressPercent))
                 }%` }}
               >
                   <div className="w-full h-full bg-white/20 animate-pulse"></div>
@@ -319,14 +335,19 @@ export const TrackOrder = () => {
 
             {/* Step Icons along the track */}
             <div className="relative flex justify-between z-10 w-[calc(100%+8px)] -ml-[4px]">
-              {[
+              {(order?.order_mode === 'takeaway' ? [
+                { key: 'pending', Icon: FileText, label: 'Rx' },
+                { key: 'preparing', Icon: ChefHat, label: 'Kitchen' },
+                { key: 'ready', Icon: ShoppingBag, label: 'Ready' },
+                { key: 'completed', Icon: CheckCircle2, label: 'Picked Up' },
+              ] : [
                 { key: 'pending', Icon: FileText, label: 'Rx' },
                 { key: 'preparing', Icon: ChefHat, label: 'Kitchen' },
                 { key: 'ready', Icon: ShoppingBag, label: 'Ready' },
                 { key: 'out_for_delivery', Icon: Bike, label: 'On Way' },
                 { key: 'completed', Icon: CheckCircle2, label: 'Done' },
-              ].map((step) => {
-                const steps = ['pending', 'preparing', 'ready', 'out_for_delivery', 'completed'];
+              ]).map((step, idx, arr) => {
+                const steps = arr.map(s => s.key);
                 const currentIdx = steps.indexOf(orderStatus);
                 const stepIdx = steps.indexOf(step.key);
                 const isActive = stepIdx <= currentIdx;
@@ -352,7 +373,7 @@ export const TrackOrder = () => {
          </div>
 
          {/* Driver Card Premium UI */}
-         {orderStatus !== 'pending' && orderStatus !== 'preparing' && (
+         {order?.order_mode !== 'takeaway' && orderStatus !== 'pending' && orderStatus !== 'preparing' && (
            <div className="flex bg-white dark:bg-gray-900 p-4 rounded-3xl items-center gap-4 border border-gray-100 dark:border-gray-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-all duration-500 animate-in slide-in-from-bottom-4 mt-8 lg:mt-4">
               <div className="relative">
                 <div className={`absolute inset-0 rounded-full ${orderStatus === 'out_for_delivery' ? 'bg-emerald-400 animate-ping opacity-20' : ''}`}></div>

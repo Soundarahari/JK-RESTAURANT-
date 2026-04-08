@@ -111,7 +111,7 @@ export default async function handler(req: any, res: any) {
           chatId,
           messageId,
           updatedMessage,
-          [[{ text: '✅ Food Ready (Send to Driver)', callback_data: `ready_${orderId}` }]]
+          [[{ text: orderData.order_mode === 'takeaway' ? '✅ Food Ready (Takeaway)' : '✅ Food Ready (Send to Driver)', callback_data: `ready_${orderId}` }]]
         );
 
         await answerCallbackQuery(callbackQueryId, '👨‍🍳 Started preparing!');
