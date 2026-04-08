@@ -100,10 +100,16 @@ export const TrackOrder = () => {
         if (!error && data) {
           setLocalOrder(data);
           setOrderStatus(data.status);
-          if (data.driver_location?.lat && data.driver_location?.lng) {
-            setDriverPos({ lat: data.driver_location.lat, lng: data.driver_location.lng });
-            setHasRealGPS(true);
-          }
+          
+          // ONLY update position if we started fresh (no live signal yet)
+          // This prevents "flicker" where polling overwrites live GPS
+          setHasRealGPS(prev => {
+             const isRealNow = !!(data.driver_location?.lat && data.driver_location?.lng);
+             if (!prev && isRealNow) {
+                setDriverPos({ lat: data.driver_location.lat, lng: data.driver_location.lng });
+             }
+             return prev || isRealNow;
+          });
         }
       } catch (e) {
         console.error('Fetch error:', e);
@@ -112,14 +118,12 @@ export const TrackOrder = () => {
       }
     };
     
-    // Call immediately
     fetchFullOrder();
 
     // Poll as fallback every 5 seconds if not completed
     const pollInterval = setInterval(() => {
-      if (orderStatus !== 'completed' && orderStatus !== 'cancelled') {
-        fetchFullOrder();
-      }
+      // We check status in the interval to avoid adding it to effect dependencies
+      fetchFullOrder();
     }, 5000);
 
     // Subscribe to realtime updates
@@ -137,7 +141,7 @@ export const TrackOrder = () => {
           const newData = payload.new;
           console.log('🔔 Realtime Update Received:', newData.status);
           
-          // Update driver position from real GPS
+          // ALWAYS trust real-time GPS for smooth movement
           if (newData.driver_location?.lat && newData.driver_location?.lng) {
             setDriverPos({
               lat: newData.driver_location.lat,
@@ -146,23 +150,19 @@ export const TrackOrder = () => {
             setHasRealGPS(true);
           }
           
-          // Update order status
           if (newData.status) {
             setOrderStatus(newData.status);
-            // Also update localOrder to keep everything in sync
             setLocalOrder((prev: any) => prev ? { ...prev, status: newData.status } : newData);
           }
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Subscription Status:', status);
-      });
+      .subscribe();
 
     return () => {
       clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
-  }, [orderId, orderStatus]);
+  }, [orderId]);
 
   // Fallback simulation if no real GPS data (simulates movement from restaurant to user)
   useEffect(() => {
