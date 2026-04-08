@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowLeft, Clock, MapPin, RefreshCw, FileText, ChefHat, ShoppingBag, Bike, CheckCircle2, Phone, Star } from 'lucide-react';
+import { ArrowLeft, Clock, RefreshCw, FileText, ChefHat, ShoppingBag, Bike, CheckCircle2, Phone, Star } from 'lucide-react';
 import L from 'leaflet';
 import { RESTAURANT_COORDS } from '../utils/geo';
 import { supabase } from '../lib/supabase';
