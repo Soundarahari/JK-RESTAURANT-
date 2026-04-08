@@ -22,11 +22,11 @@ export const Checkout = () => {
   const [selectedCollege, setSelectedCollege] = useState('');
 
   const COLLEGES = [
-    "Sri Krishna College of Engineering and Technology (SKCET)",
-    "Sri Krishna College of Technology (SKCT)",
-    "Sri Krishna Arts and Science College (SKASC)",
-    "Kumaraguru College of Technology (KCT)",
-    "PSG College of Technology",
+    "JKKN Educational Institutions",
+    "SSM College of Engineering",
+    "Excel Group of Institutions",
+    "JKKM College",
+    "Vivekanandha Educational Institutions for Women",
     "Other (Use GPS / Map Location)"
   ];
 
