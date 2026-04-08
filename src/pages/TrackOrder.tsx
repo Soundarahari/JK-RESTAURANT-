@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowLeft, Clock, RefreshCw, FileText, ChefHat, ShoppingBag, Bike, CheckCircle2, Phone, Star } from 'lucide-react';
+import { ArrowLeft, Clock, RefreshCw, FileText, ChefHat, ShoppingBag, Bike, CheckCircle2, Phone, Star, Loader2 } from 'lucide-react';
 import L from 'leaflet';
 import { RESTAURANT_COORDS } from '../utils/geo';
 import { supabase } from '../lib/supabase';
@@ -83,27 +83,38 @@ export const TrackOrder = () => {
   const [simProgressPercent, setSimProgressPercent] = useState(0);
 
   // Subscribe to real-time Supabase changes for driver_location
+  const [loading, setLoading] = useState(!localOrder);
+
   useEffect(() => {
     if (!orderId) return;
 
     // Fetch full order to ensure UI has data if store is empty
     const fetchFullOrder = async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('id', orderId)
-        .single();
-      
-      if (!error && data) {
-        setLocalOrder(data);
-        setOrderStatus(data.status);
-        if (data.driver_location?.lat && data.driver_location?.lng) {
-          setDriverPos({ lat: data.driver_location.lat, lng: data.driver_location.lng });
-          setHasRealGPS(true);
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('id', orderId)
+          .single();
+        
+        if (!error && data) {
+          setLocalOrder(data);
+          setOrderStatus(data.status);
+          if (data.driver_location?.lat && data.driver_location?.lng) {
+            setDriverPos({ lat: data.driver_location.lat, lng: data.driver_location.lng });
+            setHasRealGPS(true);
+          }
         }
+      } catch (e) {
+        console.error('Fetch error:', e);
+      } finally {
+        setLoading(false);
       }
     };
     
+    // Call immediately
+    fetchFullOrder();
+
     // Poll as fallback every 5 seconds if not completed
     const pollInterval = setInterval(() => {
       if (orderStatus !== 'completed' && orderStatus !== 'cancelled') {
@@ -194,11 +205,29 @@ export const TrackOrder = () => {
     return Math.min(100, Math.floor((coveredDist / totalDist) * 100));
   })();
 
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[100dvh] bg-gray-50 dark:bg-gray-950">
+        <Loader2 className="animate-spin text-brand-500 mb-4" size={40} />
+        <p className="text-gray-500 font-black uppercase tracking-widest text-[10px]">Syncing live track...</p>
+      </div>
+    );
+  }
+
   if (!order) {
     return (
-      <div className="flex flex-col items-center justify-center h-[70vh]">
-        <h2 className="text-xl font-black">Order not found</h2>
-        <button onClick={() => navigate('/profile')} className="mt-4 px-6 py-2 bg-brand-500 text-white rounded-full">Go Back</button>
+      <div className="flex flex-col items-center justify-center h-[100dvh] bg-gray-50 dark:bg-gray-950 px-6 text-center">
+        <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 rounded-[2.5rem] flex items-center justify-center mb-6">
+          <FileText className="text-red-500" size={32} />
+        </div>
+        <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight mb-2">Order Not Found</h2>
+        <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-8">We couldn't find the delivery details for this order ID. It may have been archived or the link is incorrect.</p>
+        <button 
+          onClick={() => navigate('/profile')} 
+          className="bg-brand-500 text-white font-black px-8 py-4 rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-brand-500/20 active:scale-95 transition-all"
+        >
+          Go Back
+        </button>
       </div>
     );
   }
