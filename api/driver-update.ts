@@ -56,16 +56,30 @@ export default async function handler(req: any, res: any) {
       updatePayload.driver_location = driverLocation;
     }
 
-    // Fetch current state to avoid duplicate emails/notifications on GPS loops
+    // Fetch current state for email and basic info
     const { data: orderData, error: fetchError } = await supabase
       .from('orders')
-      .select('status, user_name, user_email, user_phone, delivery_address, items, total_amount, order_mode, telegram_manager_msg_id, telegram_driver_msg_id')
+      .select('status, user_name, user_email, user_phone, delivery_address, items, total_amount, order_mode')
       .eq('id', orderId)
       .single();
     
+    // Fetch Telegram IDs separately in case the columns don't exist yet
+    let managerMsgId = null;
+    let driverMsgId = null;
+    try {
+      const { data: tgData } = await supabase
+        .from('orders')
+        .select('telegram_manager_msg_id, telegram_driver_msg_id')
+        .eq('id', orderId)
+        .single();
+      managerMsgId = tgData?.telegram_manager_msg_id;
+      driverMsgId = tgData?.telegram_driver_msg_id;
+    } catch (e) {
+      console.warn('[DRIVER-UPDATE] ⚠️ Could not fetch Telegram message IDs. Columns might be missing.', e);
+    }
+    
     if (fetchError) {
-      console.error('[DRIVER-UPDATE] ❌ Fetch error:', fetchError);
-      // Even if fetch fails, we should still try to update the status in DB
+      console.error('[DRIVER-UPDATE] ❌ Basic order fetch error:', fetchError);
     }
     
     const isStatusChanging = orderData?.status !== newStatus;
@@ -145,7 +159,6 @@ export default async function handler(req: any, res: any) {
       }
 
       // 🤖 2. Update Telegram - Manager Bot
-      const managerMsgId = orderData.telegram_manager_msg_id;
       const managerChatId = process.env.TELEGRAM_CHAT_ID;
       if (managerChatId) {
         const emoji = newStatus === 'completed' ? '🏆' : '🛵';
@@ -156,36 +169,41 @@ export default async function handler(req: any, res: any) {
 
         let editSucceeded = false;
         if (managerMsgId) {
-          const editRes = await fetch(`${TELEGRAM_API}/editMessageText`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: managerChatId,
-              message_id: parseInt(managerMsgId),
-              text: updatedManagerMessage,
-              parse_mode: 'Markdown'
-            }),
-          });
-          if (editRes.ok) editSucceeded = true;
-          else console.error('[DRIVER-UPDATE] Manager edit failed:', await editRes.text());
+          try {
+            const editRes = await fetch(`${TELEGRAM_API}/editMessageText`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: managerChatId,
+                message_id: parseInt(managerMsgId),
+                text: updatedManagerMessage,
+                parse_mode: 'Markdown'
+              }),
+            });
+            if (editRes.ok) editSucceeded = true;
+            else console.error('[DRIVER-UPDATE] Manager edit failed:', await editRes.text());
+          } catch (e) {
+            console.error('[DRIVER-UPDATE] Manager edit error:', e);
+          }
         }
 
         // Fallback: If no ID or edit failed, send a NEW message
         if (!editSucceeded) {
-          await fetch(`${TELEGRAM_API}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: managerChatId,
-              text: updatedManagerMessage,
-              parse_mode: 'Markdown'
-            }),
-          });
+          try {
+            await fetch(`${TELEGRAM_API}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: managerChatId,
+                text: updatedManagerMessage,
+                parse_mode: 'Markdown'
+              }),
+            });
+          } catch (e) { console.error('[DRIVER-UPDATE] Manager fallback failed:', e); }
         }
       }
 
       // 🤖 3. Update Telegram - Driver Group
-      const driverMsgId = orderData.telegram_driver_msg_id;
       const driverChatId = process.env.TELEGRAM_DRIVER_GROUP_CHAT_ID;
       if (driverChatId) {
         const emoji = newStatus === 'completed' ? '🏁' : '✅';
@@ -196,31 +214,37 @@ export default async function handler(req: any, res: any) {
 
         let editSucceeded = false;
         if (driverMsgId) {
-          const editRes = await fetch(`${TELEGRAM_API}/editMessageText`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: driverChatId,
-              message_id: parseInt(driverMsgId),
-              text: updatedDriverMessage,
-              parse_mode: 'Markdown'
-            }),
-          });
-          if (editRes.ok) editSucceeded = true;
-          else console.error('[DRIVER-UPDATE] Driver group edit failed:', await editRes.text());
+          try {
+            const editRes = await fetch(`${TELEGRAM_API}/editMessageText`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: driverChatId,
+                message_id: parseInt(driverMsgId),
+                text: updatedDriverMessage,
+                parse_mode: 'Markdown'
+              }),
+            });
+            if (editRes.ok) editSucceeded = true;
+            else console.error('[DRIVER-UPDATE] Driver group edit failed:', await editRes.text());
+          } catch (e) {
+            console.error('[DRIVER-UPDATE] Driver edit error:', e);
+          }
         }
 
         // Fallback: If no ID or edit failed, send a NEW message
         if (!editSucceeded) {
-          await fetch(`${TELEGRAM_API}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: driverChatId,
-              text: updatedDriverMessage,
-              parse_mode: 'Markdown'
-            }),
-          });
+          try {
+            await fetch(`${TELEGRAM_API}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: driverChatId,
+                text: updatedDriverMessage,
+                parse_mode: 'Markdown'
+              }),
+            });
+          } catch (e) { console.error('[DRIVER-UPDATE] Driver fallback failed:', e); }
         }
       }
     }
