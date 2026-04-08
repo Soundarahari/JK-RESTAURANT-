@@ -19,6 +19,16 @@ export const Checkout = () => {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [promoInput, setPromoInput] = useState('');
+  const [selectedCollege, setSelectedCollege] = useState('');
+
+  const COLLEGES = [
+    "Sri Krishna College of Engineering and Technology (SKCET)",
+    "Sri Krishna College of Technology (SKCT)",
+    "Sri Krishna Arts and Science College (SKASC)",
+    "Kumaraguru College of Technology (KCT)",
+    "PSG College of Technology",
+    "Other (Use GPS / Map Location)"
+  ];
 
   const UPI_ID = import.meta.env.VITE_UPI_ID || 'soundarahari@fam';
 
@@ -65,8 +75,10 @@ export const Checkout = () => {
   const platformFee = 5;
   const gstAndCharges = Math.round(itemTotal * 0.05);
   const isTakeaway = orderMode === 'takeaway';
-  const isTooFar = !isTakeaway && distance !== null && distance > MAX_DELIVERY_RADIUS_KM;
-  const deliveryFee = isTakeaway ? 0 : (distance !== null && distance <= MAX_DELIVERY_RADIUS_KM ? (distance > 3 ? 40 : 20) : 0);
+  const activeCollege = isStudentVerified && selectedCollege && selectedCollege !== 'Other (Use GPS / Map Location)';
+  const isTooFar = !isTakeaway && !activeCollege && distance !== null && distance > MAX_DELIVERY_RADIUS_KM;
+  // If college selected, flat ₹20 delivery fee or similar, but for now logic is same
+  const deliveryFee = isTakeaway ? 0 : ((distance !== null && distance <= MAX_DELIVERY_RADIUS_KM && distance > 3) ? 40 : 20);
   
   const grandTotal = itemTotal + (isTakeaway ? 0 : platformFee) + gstAndCharges + deliveryFee;
 
@@ -135,7 +147,7 @@ export const Checkout = () => {
 
   const canPlaceOrder = isTakeaway
     ? (paymentScreenshot !== null && utrNumber.length >= 6)
-    : (distance !== null && !isTooFar && paymentScreenshot !== null && utrNumber.length >= 6 && deliveryAddress.length > 5);
+    : ((activeCollege || (distance !== null && !isTooFar)) && paymentScreenshot !== null && utrNumber.length >= 6 && (activeCollege || deliveryAddress.length > 5));
 
 
   // Effect to redirect if cart is empty on mount
@@ -183,15 +195,36 @@ export const Checkout = () => {
       {/* Delivery Check */}
       {!isTakeaway && (
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 mb-4">
-          <h3 className="text-xs font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2"><Navigation size={14} /> Delivery Address</h3>
+          <h3 className="text-xs font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2"><Navigation size={14} /> Delivery Address</h3>
+          
+          {isStudentVerified && (
+            <div className="mb-4">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Select College</label>
+              <select
+                value={selectedCollege}
+                onChange={(e) => {
+                  setSelectedCollege(e.target.value);
+                  if (e.target.value && e.target.value !== 'Other (Use GPS / Map Location)') {
+                    setDeliveryAddress(prev => prev.includes(' - ') ? prev : e.target.value + ' - ');
+                  }
+                }}
+                className="w-full text-sm bg-gray-50 dark:bg-gray-800 border-none rounded-lg p-3 outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-gray-200 font-bold"
+              >
+                <option value="">Choose Institution (Optional)</option>
+                {COLLEGES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          )}
+
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">{isStudentVerified ? "Room/Block or Custom Address" : "Full Address"}</label>
           <textarea
-            placeholder="Enter your complete address (House No, Building, Landmark...)"
+            placeholder={isStudentVerified ? "E.g. Men's Hostel Block B, Room 204..." : "Enter your complete address (House No, Building, Landmark...)"}
             value={deliveryAddress}
             onChange={(e) => setDeliveryAddress(e.target.value)}
             rows={3}
             className="w-full text-sm bg-gray-50 dark:bg-gray-800 border-none rounded-lg p-3 outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-gray-200 resize-none"
           />
-          {distance === null ? (
+          {(!activeCollege && distance === null) ? (
             <div className="mt-4">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Check if you're within our {MAX_DELIVERY_RADIUS_KM}km delivery zone.</p>
               <button
@@ -203,7 +236,7 @@ export const Checkout = () => {
               </button>
               {geoError && <p className="text-xs text-red-500 mt-2">{geoError}</p>}
             </div>
-          ) : (
+          ) : distance !== null && (
             <div className={`mt-4 p-4 rounded-xl ${isTooFar ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50' : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50'}`}>
               <p className={`font-bold text-sm ${isTooFar ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
                 📍 Distance: {distance.toFixed(1)} km
@@ -214,6 +247,13 @@ export const Checkout = () => {
                 <p className="text-xs text-green-600 dark:text-green-400 mt-1">✅ You are in the delivery zone.</p>
               )}
               <button onClick={handleLocate} className="text-xs underline text-gray-500 dark:text-gray-400 mt-2 block">Update Location</button>
+            </div>
+          )}
+
+          {activeCollege && distance === null && (
+            <div className="mt-4 p-4 rounded-xl bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-900/50">
+              <p className="text-xs font-bold text-brand-700 dark:text-brand-400 mb-2">✅ Verified College Selected</p>
+              <p className="text-[11px] text-brand-600/80">You don't need to specify your GPS location, but you can <button onClick={handleLocate} className="underline font-bold">Pin on Map</button> if you are ordering to a specific off-campus spot.</p>
             </div>
           )}
         </div>

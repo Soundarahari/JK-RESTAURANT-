@@ -171,9 +171,9 @@ export default async function handler(req: any, res: any) {
 
         await updateTelegramMessage(chatId, messageId, updatedMessage, []);
 
-        // 3. Send enhanced delivery message directly to the Drivers Telegram group
+        // 3. Send enhanced delivery message directly to the Drivers Telegram group (if delivery)
         const driverGroupChatId = process.env.TELEGRAM_DRIVER_GROUP_CHAT_ID;
-        if (driverGroupChatId) {
+        if (driverGroupChatId && orderData.order_mode !== 'takeaway') {
           const driverMessage = `🚨 *NEW DELIVERY JOB!* 🚨\n\n*Order:* #${orderData.id.slice(0, 8)}\n*Customer:* ${orderData.user_name}\n*Phone:* ${orderData.user_phone}\n*Address:* ${orderData.delivery_address || 'N/A'}\n*Total:* ₹${orderData.total_amount}\n\n*Driver, click here to start delivery:*\nhttps://jk-restaurant-dwdp.vercel.app/driver/${orderId}`;
 
           await fetch(`${TELEGRAM_API}/sendMessage`, {
@@ -187,7 +187,7 @@ export default async function handler(req: any, res: any) {
           });
         }
 
-        await answerCallbackQuery(callbackQueryId, '✅ Driver notified!');
+        await answerCallbackQuery(callbackQueryId, orderData.order_mode === 'takeaway' ? '✅ Marked as Ready!' : '✅ Driver notified!');
       }
 
       // Always return 200 so Telegram knows we received the callback
