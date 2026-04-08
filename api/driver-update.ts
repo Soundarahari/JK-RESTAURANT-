@@ -81,6 +81,8 @@ export default async function handler(req: any, res: any) {
     }
     
     const isStatusChanging = orderData?.status !== newStatus;
+    const isGpsPulse = !!driverLocation;
+    const shouldNotify = isStatusChanging || (newStatus === 'out_for_delivery' && !isGpsPulse);
 
     const { error: dbError } = await supabase
       .from('orders')
@@ -94,8 +96,7 @@ export default async function handler(req: any, res: any) {
 
     console.log(`[DRIVER-UPDATE] ✅ Order ${orderId} updated to ${newStatus}`);
 
-    // Send Out for Delivery Email and Telegram Notification ONLY if status just changed
-    if (isStatusChanging && orderData) {
+    if (shouldNotify && orderData) {
       const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
       const shortId = orderId.slice(0, 8);
       
