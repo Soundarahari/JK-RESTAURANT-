@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Navigation, Edit3, ShoppingBag, Package, Copy, ArrowLeft } from 'lucide-react';
 import { calculateDistance, RESTAURANT_COORDS, MAX_DELIVERY_RADIUS_KM } from '../utils/geo';
 
+
 export const Checkout = () => {
   const { cart, user, orderMode, setOrderMode, getTotalPrice, promos, appliedPromoCode, setAppliedPromoCode } = useStore();
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ export const Checkout = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [geoError, setGeoError] = useState('');
   const [isLocating, setIsLocating] = useState(false);
+
   const [utrNumber, setUtrNumber] = useState('');
   const [cookingInstructions, setCookingInstructions] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -28,6 +30,7 @@ export const Checkout = () => {
   ];
 
   const UPI_ID = import.meta.env.VITE_UPI_ID || 'soundarahari@fam';
+
 
 
   const handleApplyPromo = () => {
@@ -84,6 +87,8 @@ export const Checkout = () => {
       return;
     }
 
+
+
     if (!isTakeaway && !deliveryAddress) {
       alert('Please enter your delivery address');
       return;
@@ -99,7 +104,7 @@ export const Checkout = () => {
 
     try {
       const { success, error } = await useStore.getState().placeOrder(
-        '',
+        '',  // no screenshot needed
         utrNumber,
         isTakeaway ? undefined : deliveryAddress,
         finalLocation
@@ -374,6 +379,8 @@ export const Checkout = () => {
               className="w-full text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 outline-none focus:ring-1 focus:ring-brand-500 font-bold"
             />
           </div>
+
+
         </div>
       </div>
 
