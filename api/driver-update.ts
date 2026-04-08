@@ -161,8 +161,8 @@ export default async function handler(req: any, res: any) {
       // 🤖 2. Update Telegram - Manager Bot
       const managerChatId = process.env.TELEGRAM_CHAT_ID;
       if (managerChatId) {
-        const emoji = newStatus === 'completed' ? '🏆' : '🛵';
-        const statusText = newStatus === 'completed' ? '🏆 Completed' : '🛵 Out for Delivery';
+        const emoji = newStatus === 'completed' ? '✅' : '🛵';
+        const statusText = newStatus === 'completed' ? '✅ Completed' : '🛵 Out for Delivery';
         const footerNote = newStatus === 'completed' ? '_Order has been successfully delivered._' : '_Driver is now on the way to the customer._';
         
         const updatedManagerMessage = `${emoji} *Order #${shortId}*\n━━━━━━━━━━━━━━━━━━━━\n*Customer:* ${orderData.user_name}\n*Phone:* ${orderData.user_phone}\n*Address:* 📍 ${address}\n*Mode:* 🛵 Delivery\n\n*Items:*\n${itemsList}\n\n*Total:* ₹${orderData.total_amount}\n━━━━━━━━━━━━━━━━━━━━\n*Status:* ${statusText}\n\n${footerNote}`;
@@ -181,23 +181,15 @@ export default async function handler(req: any, res: any) {
               }),
             });
             if (editRes.ok) editSucceeded = true;
-            else console.error('[DRIVER-UPDATE] Manager edit failed:', await editRes.text());
-          } catch (e) {
-            console.error('[DRIVER-UPDATE] Manager edit error:', e);
-          }
+          } catch (e) { console.error('[DRIVER-UPDATE] Manager edit error:', e); }
         }
 
-        // Fallback: If no ID or edit failed, send a NEW message
         if (!editSucceeded) {
           try {
             await fetch(`${TELEGRAM_API}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: managerChatId,
-                text: updatedManagerMessage,
-                parse_mode: 'Markdown'
-              }),
+              body: JSON.stringify({ chat_id: managerChatId, text: updatedManagerMessage, parse_mode: 'Markdown' }),
             });
           } catch (e) { console.error('[DRIVER-UPDATE] Manager fallback failed:', e); }
         }
@@ -206,11 +198,11 @@ export default async function handler(req: any, res: any) {
       // 🤖 3. Update Telegram - Driver Group
       const driverChatId = process.env.TELEGRAM_DRIVER_GROUP_CHAT_ID;
       if (driverChatId) {
-        const emoji = newStatus === 'completed' ? '🏁' : '✅';
+        const emoji = newStatus === 'completed' ? '✅' : '🛵';
         const title = newStatus === 'completed' ? 'DELIVERY COMPLETE' : 'ORDER PICKED UP';
         const statusText = newStatus === 'completed' ? 'Order delivered! Job well done.' : 'Order accepted and is being delivered.';
         
-        const updatedDriverMessage = `${emoji} *${title}*\n\n*Order:* #${shortId}\n*Customer:* ${orderData.user_name}\n*Status:* ${statusText}`;
+        const updatedDriverMessage = `${emoji} *${title}*\n━━━━━━━━━━━━━━━━━━━━\n*Order:* #${shortId}\n*Customer:* ${orderData.user_name}\n*Phone:* ${orderData.user_phone}\n*Address:* 📍 ${address}\n\n*Items:*\n${itemsList}\n\n*Total:* ₹${orderData.total_amount}\n━━━━━━━━━━━━━━━━━━━━\n*Status:* ${statusText}`;
 
         let editSucceeded = false;
         if (driverMsgId) {
@@ -226,23 +218,15 @@ export default async function handler(req: any, res: any) {
               }),
             });
             if (editRes.ok) editSucceeded = true;
-            else console.error('[DRIVER-UPDATE] Driver group edit failed:', await editRes.text());
-          } catch (e) {
-            console.error('[DRIVER-UPDATE] Driver edit error:', e);
-          }
+          } catch (e) { console.error('[DRIVER-UPDATE] Driver edit error:', e); }
         }
 
-        // Fallback: If no ID or edit failed, send a NEW message
         if (!editSucceeded) {
           try {
             await fetch(`${TELEGRAM_API}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: driverChatId,
-                text: updatedDriverMessage,
-                parse_mode: 'Markdown'
-              }),
+              body: JSON.stringify({ chat_id: driverChatId, text: updatedDriverMessage, parse_mode: 'Markdown' }),
             });
           } catch (e) { console.error('[DRIVER-UPDATE] Driver fallback failed:', e); }
         }
