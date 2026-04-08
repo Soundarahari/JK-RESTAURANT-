@@ -52,7 +52,7 @@ export interface UserProfile {
 export interface Promo {
   id: string;
   code: string;
-  discount_type: 'percentage' | 'flat';
+  discount_type: 'percentage' | 'flat' | 'student_offer';
   discount_value: number;
   is_active: boolean;
 }
@@ -517,12 +517,12 @@ export const useStore = create<AppState>()(
         const { cart, user, appliedPromoCode } = get();
         
         let subtotal = cart.reduce((sum, item) => {
-          const isStudentVerified = user?.is_student;
+          const isStudentVerified = user?.is_student || (appliedPromoCode?.discount_type === 'student_offer');
           const price = isStudentVerified ? item.student_price : item.base_price;
           return sum + (price * item.quantity);
         }, 0);
         
-        if (appliedPromoCode && !user?.is_student) {
+        if (appliedPromoCode && !user?.is_student && appliedPromoCode.discount_type !== 'student_offer') {
           if (appliedPromoCode.discount_type === 'percentage') {
             subtotal = subtotal - (subtotal * appliedPromoCode.discount_value / 100);
           } else {

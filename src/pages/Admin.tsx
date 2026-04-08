@@ -26,7 +26,7 @@ export const Admin = () => {
     prep_time: 15
   });
   
-  const [newPromo, setNewPromo] = useState({ code: '', discount_type: 'percentage' as 'percentage' | 'flat', discount_value: 10, is_active: true });
+  const [newPromo, setNewPromo] = useState({ code: '', discount_type: 'percentage' as 'percentage' | 'flat' | 'student_offer', discount_value: 10, is_active: true });
   
   const [isSyncingCategories, setIsSyncingCategories] = useState(false);
   
@@ -448,11 +448,12 @@ export const Admin = () => {
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Discount Type</label>
                 <select 
                   value={newPromo.discount_type} 
-                  onChange={e => setNewPromo({...newPromo, discount_type: e.target.value as 'percentage' | 'flat'})}
+                  onChange={e => setNewPromo({...newPromo, discount_type: e.target.value as 'percentage' | 'flat' | 'student_offer'})}
                   className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm outline-none"
                 >
                   <option value="percentage">Percentage (%)</option>
                   <option value="flat">Flat Amount (₹)</option>
+                  <option value="student_offer">Student Offer</option>
                 </select>
               </div>
               <div>
@@ -468,7 +469,7 @@ export const Admin = () => {
             </div>
             <button 
               onClick={() => {
-                if (newPromo.code && newPromo.discount_value > 0) {
+                if (newPromo.code && (newPromo.discount_type === 'student_offer' || newPromo.discount_value > 0)) {
                   addPromo({ ...newPromo });
                   setNewPromo({ code: '', discount_type: 'percentage', discount_value: 10, is_active: true });
                 }
@@ -489,7 +490,9 @@ export const Admin = () => {
                   <div>
                     <h4 className="font-black text-brand-600 dark:text-brand-400 text-lg uppercase tracking-wider">{promo.code}</h4>
                     <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-1">
-                      {promo.discount_type === 'percentage' ? `${promo.discount_value}% OFF` : `₹${promo.discount_value} FLAT RATE`}
+                      {promo.discount_type === 'percentage' ? `${promo.discount_value}% OFF` : 
+                       promo.discount_type === 'flat' ? `₹${promo.discount_value} FLAT RATE` : 
+                       'STUDENT PRICES'}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">
