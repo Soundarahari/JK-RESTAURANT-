@@ -346,7 +346,7 @@ export const TrackOrder = () => {
                 { key: 'ready', Icon: ShoppingBag, label: 'Ready' },
                 { key: 'out_for_delivery', Icon: Bike, label: 'On Way' },
                 { key: 'completed', Icon: CheckCircle2, label: 'Done' },
-              ]).map((step, idx, arr) => {
+              ]).map((step, _, arr) => {
                 const steps = arr.map(s => s.key);
                 const currentIdx = steps.indexOf(orderStatus);
                 const stepIdx = steps.indexOf(step.key);
