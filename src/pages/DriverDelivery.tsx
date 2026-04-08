@@ -16,16 +16,46 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-const driverIcon = new L.Icon({
-  iconUrl: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
-  iconSize: [44, 44],
-  iconAnchor: [22, 22],
+const driverIcon = L.divIcon({
+  className: 'map-marker-container',
+  html: `
+    <div class="relative w-8 h-8 flex items-center justify-center">
+      <div class="marker-pulse bg-blue-500"></div>
+      <div class="relative w-4 h-4 bg-blue-500 border-2 border-white rounded-full shadow-lg z-10"></div>
+    </div>
+  `,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
 });
 
-const customerIcon = new L.Icon({
-  iconUrl: 'https://cdn-icons-png.flaticon.com/512/1077/1077114.png',
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
+const customerIcon = L.divIcon({
+  className: 'map-marker-container',
+  html: `
+    <div class="relative w-10 h-10 flex items-center justify-center">
+      <div class="marker-pulse bg-emerald-500"></div>
+      <div class="relative flex flex-col items-center">
+        <div class="w-5 h-5 bg-emerald-500 border-2 border-white rounded-full shadow-xl flex items-center justify-center z-10">
+          <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+        </div>
+        <div class="w-0.5 h-2 bg-emerald-500 -mt-0.5 shadow-lg"></div>
+      </div>
+    </div>
+  `,
+  iconSize: [40, 40],
+  iconAnchor: [20, 32],
+});
+
+const restaurantIcon = L.divIcon({
+  className: 'map-marker-container',
+  html: `
+    <div class="relative w-10 h-10 flex items-center justify-center">
+      <div class="w-6 h-6 bg-orange-500 border-2 border-white rounded-xl shadow-xl rotate-45 flex items-center justify-center z-10 overflow-hidden">
+        <div class="w-full h-full bg-gradient-to-br from-orange-400 to-orange-600"></div>
+      </div>
+    </div>
+  `,
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
 });
 
 interface OrderData {
@@ -303,7 +333,7 @@ export const DriverDelivery = () => {
           />
           
           {/* Restaurant marker */}
-          <Marker position={[RESTAURANT_COORDS.lat, RESTAURANT_COORDS.lng]}>
+          <Marker position={[RESTAURANT_COORDS.lat, RESTAURANT_COORDS.lng]} icon={restaurantIcon}>
             <Popup>JK Restaurant 🍽️</Popup>
           </Marker>
           
