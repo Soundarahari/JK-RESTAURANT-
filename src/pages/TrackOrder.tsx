@@ -80,7 +80,8 @@ export const TrackOrder = () => {
   }, [order?.status]);
   
   // Simulated progress for fallback (when no real GPS)
-  const [simProgressPercent, setSimProgressPercent] = useState(0);
+  // simulated progress is no longer used
+
 
   // Subscribe to real-time Supabase changes for driver_location
   const [loading, setLoading] = useState(!localOrder);
@@ -164,31 +165,12 @@ export const TrackOrder = () => {
     };
   }, [orderId]);
 
-  // Fallback simulation if no real GPS data (simulates movement from restaurant to user)
-  useEffect(() => {
-    if (hasRealGPS || !userLoc) return;
+  // Simulation removed to prevent "Front and Back" jumping issues
 
-    let p = 0;
-    const interval = setInterval(() => {
-      p += 0.01;
-      if (p >= 1) {
-        p = 1;
-        clearInterval(interval);
-      }
-      
-      const newLat = RESTAURANT_COORDS.lat + (userLoc.lat - RESTAURANT_COORDS.lat) * p;
-      const newLng = RESTAURANT_COORDS.lng + (userLoc.lng - RESTAURANT_COORDS.lng) * p;
-      
-      setDriverPos({ lat: newLat, lng: newLng });
-      setSimProgressPercent(Math.floor(p * 100));
-    }, 200);
-
-    return () => clearInterval(interval);
-  }, [userLoc, hasRealGPS]);
 
   // Calculate progress from real GPS data
   const progressPercent = (() => {
-    if (!hasRealGPS) return simProgressPercent;
+    if (!hasRealGPS) return 0;
     if (!userLoc) return 0;
     if (orderStatus === 'completed') return 100;
     if (orderStatus === 'pending' || orderStatus === 'preparing' || orderStatus === 'ready') return 0;
