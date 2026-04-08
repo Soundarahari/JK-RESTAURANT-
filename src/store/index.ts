@@ -539,6 +539,7 @@ export const useStore = create<AppState>()(
         user: state.user,
         cart: state.cart,
         orderMode: state.orderMode,
+        promos: state.promos,
       }),
     }
   )
