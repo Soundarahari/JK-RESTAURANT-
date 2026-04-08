@@ -137,7 +137,7 @@ export default async function handler(req: any, res: any) {
 
         // 2. Rebuild full message for manager (remove buttons)
         const itemsList = orderData.items.map((item: any) => `• ${item.quantity}x ${item.name}`).join('\n');
-        const updatedMessage = `*🟢 Order #${orderId.slice(0, 8)}*\n━━━━━━━━━━━━━━━━━━━━\n*Customer:* ${orderData.user_name}\n*Phone:* ${orderData.user_phone}\n*Mode:* ${orderData.order_mode === 'takeaway' ? '🥡 Takeaway' : '🛵 Delivery'}\n\n*Items:*\n${itemsList}\n\n*Total:* ₹${orderData.total_amount}\n━━━━━━━━━━━━━━━━━━━━\n*Status:* 🟢 Ready for Pickup\n\n_Waiting for driver to pick up..._`;
+        const updatedMessage = `*🟢 Order #${orderId.slice(0, 8)}*\n━━━━━━━━━━━━━━━━━━━━\n*Customer:* ${orderData.user_name}\n*Phone:* ${orderData.user_phone}\n*Mode:* ${orderData.order_mode === 'takeaway' ? '🥡 Takeaway' : '🛵 Delivery'}\n\n*Items:*\n${itemsList}\n\n*Total:* ₹${orderData.total_amount}\n━━━━━━━━━━━━━━━━━━━━\n*Status:* 🟢 Ready for Pickup\n\n_${orderData.order_mode === 'takeaway' ? 'Waiting for customer to pick up...' : 'Waiting for driver to pick up...'}_`;
 
         await updateTelegramMessage(chatId, messageId, updatedMessage, []);
 
