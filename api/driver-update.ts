@@ -57,11 +57,16 @@ export default async function handler(req: any, res: any) {
     }
 
     // Fetch current state to avoid duplicate emails/notifications on GPS loops
-    const { data: orderData } = await supabase
+    const { data: orderData, error: fetchError } = await supabase
       .from('orders')
       .select('status, user_name, user_email, user_phone, delivery_address, items, total_amount, order_mode, telegram_manager_msg_id, telegram_driver_msg_id')
       .eq('id', orderId)
       .single();
+    
+    if (fetchError) {
+      console.error('[DRIVER-UPDATE] ❌ Fetch error:', fetchError);
+      // Even if fetch fails, we should still try to update the status in DB
+    }
     
     const isStatusChanging = orderData?.status !== newStatus;
 
@@ -81,84 +86,142 @@ export default async function handler(req: any, res: any) {
     if (isStatusChanging && orderData) {
       const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
       const shortId = orderId.slice(0, 8);
-      const itemsList = orderData.items.map((item: any) => `• ${item.quantity}x ${item.name}`).join('\n');
+      
+      // Parse items safely
+      let itemsArray = [];
+      try {
+        itemsArray = typeof orderData.items === 'string' ? JSON.parse(orderData.items) : orderData.items;
+      } catch (e) {
+        console.error('[DRIVER-UPDATE] Items parse error:', e);
+        itemsArray = [];
+      }
+      
+      const itemsList = Array.isArray(itemsArray) 
+        ? itemsArray.map((item: any) => `• ${item.quantity}x ${item.name}`).join('\n')
+        : 'Order details unavailable';
+
       const address = orderData.delivery_address || 'N/A';
       
       // 💌 1. Send Email (Out for Delivery Only)
-      if (newStatus === 'out_for_delivery' && orderData.user_email && process.env.GMAIL_USER) {
-        try {
-          const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
-          });
-          await transporter.sendMail({
-            from: `"JK Restaurant" <${process.env.GMAIL_USER}>`,
-            to: orderData.user_email,
-            subject: `Your Order is Out for Delivery! 🛵 - JK Restaurant`,
-            html: `
-              <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 40px 20px; background-color: #f9fafb;">
-                <div style="background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-                  <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px 20px; text-align: center;">
-                    <h1 style="color: white; margin: 0; font-size: 24px;">Out for Delivery! 🛵</h1>
-                  </div>
-                  <div style="padding: 30px;">
-                    <p style="font-size: 16px; color: #374151;">Hi <strong>${orderData.user_name}</strong>,</p>
-                    <p style="color: #4b5563; line-height: 1.6; font-size: 15px;">Your delicious food is on its way to you! You can track your driver live in the JK Restaurant app.</p>
-                    <div style="text-align: center; margin-top: 30px;">
-                      <a href="https://jk-restaurant-dwdp.vercel.app/track/${orderId}" style="display: inline-block; background-color: #ea580c; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold;">Track Driver Live</a>
+      if (newStatus === 'out_for_delivery') {
+        if (orderData.user_email && process.env.GMAIL_USER) {
+          try {
+            console.log(`[DRIVER-UPDATE] Attempting to send Out for Delivery email to: ${orderData.user_email}`);
+            const transporter = nodemailer.createTransport({
+              service: 'gmail',
+              auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
+            });
+            const info = await transporter.sendMail({
+              from: `"JK Restaurant" <${process.env.GMAIL_USER}>`,
+              to: orderData.user_email,
+              subject: `Your Order is Out for Delivery! 🛵 - JK Restaurant`,
+              html: `
+                <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 40px 20px; background-color: #f9fafb;">
+                  <div style="background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px 20px; text-align: center;">
+                      <h1 style="color: white; margin: 0; font-size: 24px;">Out for Delivery! 🛵</h1>
+                    </div>
+                    <div style="padding: 30px;">
+                      <p style="font-size: 16px; color: #374151;">Hi <strong>${orderData.user_name}</strong>,</p>
+                      <p style="color: #4b5563; line-height: 1.6; font-size: 15px;">Your delicious food is on its way to you! You can track your driver live in the JK Restaurant app.</p>
+                      <div style="text-align: center; margin-top: 30px;">
+                        <a href="https://jk-restaurant-dwdp.vercel.app/track/${orderId}" style="display: inline-block; background-color: #ea580c; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold;">Track Driver Live</a>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            `
+              `
+            });
+            console.log(`[DRIVER-UPDATE] Email sent successfully: ${info.messageId}`);
+          } catch (e) {
+            console.error("[DRIVER-UPDATE] ❌ Failed to send Out for Delivery email:", e);
+          }
+        } else {
+          console.warn('[DRIVER-UPDATE] ⚠️ Skipping email: customer email or GMAIL_USER missing.', { 
+            email: orderData.user_email, 
+            hasGmailUser: !!process.env.GMAIL_USER 
           });
-        } catch (e) {
-          console.error("Failed to send Out for Delivery email:", e);
         }
       }
 
       // 🤖 2. Update Telegram - Manager Bot
       const managerMsgId = orderData.telegram_manager_msg_id;
       const managerChatId = process.env.TELEGRAM_CHAT_ID;
-      if (managerMsgId && managerChatId) {
+      if (managerChatId) {
         const emoji = newStatus === 'completed' ? '🏆' : '🛵';
         const statusText = newStatus === 'completed' ? '🏆 Completed' : '🛵 Out for Delivery';
         const footerNote = newStatus === 'completed' ? '_Order has been successfully delivered._' : '_Driver is now on the way to the customer._';
         
         const updatedManagerMessage = `${emoji} *Order #${shortId}*\n━━━━━━━━━━━━━━━━━━━━\n*Customer:* ${orderData.user_name}\n*Phone:* ${orderData.user_phone}\n*Address:* 📍 ${address}\n*Mode:* 🛵 Delivery\n\n*Items:*\n${itemsList}\n\n*Total:* ₹${orderData.total_amount}\n━━━━━━━━━━━━━━━━━━━━\n*Status:* ${statusText}\n\n${footerNote}`;
 
-        await fetch(`${TELEGRAM_API}/editMessageText`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: managerChatId,
-            message_id: parseInt(managerMsgId),
-            text: updatedManagerMessage,
-            parse_mode: 'Markdown'
-          }),
-        });
+        let editSucceeded = false;
+        if (managerMsgId) {
+          const editRes = await fetch(`${TELEGRAM_API}/editMessageText`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: managerChatId,
+              message_id: parseInt(managerMsgId),
+              text: updatedManagerMessage,
+              parse_mode: 'Markdown'
+            }),
+          });
+          if (editRes.ok) editSucceeded = true;
+          else console.error('[DRIVER-UPDATE] Manager edit failed:', await editRes.text());
+        }
+
+        // Fallback: If no ID or edit failed, send a NEW message
+        if (!editSucceeded) {
+          await fetch(`${TELEGRAM_API}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: managerChatId,
+              text: updatedManagerMessage,
+              parse_mode: 'Markdown'
+            }),
+          });
+        }
       }
 
       // 🤖 3. Update Telegram - Driver Group
       const driverMsgId = orderData.telegram_driver_msg_id;
       const driverChatId = process.env.TELEGRAM_DRIVER_GROUP_CHAT_ID;
-      if (driverMsgId && driverChatId) {
+      if (driverChatId) {
         const emoji = newStatus === 'completed' ? '🏁' : '✅';
         const title = newStatus === 'completed' ? 'DELIVERY COMPLETE' : 'ORDER PICKED UP';
         const statusText = newStatus === 'completed' ? 'Order delivered! Job well done.' : 'Order accepted and is being delivered.';
         
         const updatedDriverMessage = `${emoji} *${title}*\n\n*Order:* #${shortId}\n*Customer:* ${orderData.user_name}\n*Status:* ${statusText}`;
 
-        await fetch(`${TELEGRAM_API}/editMessageText`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: driverChatId,
-            message_id: parseInt(driverMsgId),
-            text: updatedDriverMessage,
-            parse_mode: 'Markdown'
-          }),
-        });
+        let editSucceeded = false;
+        if (driverMsgId) {
+          const editRes = await fetch(`${TELEGRAM_API}/editMessageText`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: driverChatId,
+              message_id: parseInt(driverMsgId),
+              text: updatedDriverMessage,
+              parse_mode: 'Markdown'
+            }),
+          });
+          if (editRes.ok) editSucceeded = true;
+          else console.error('[DRIVER-UPDATE] Driver group edit failed:', await editRes.text());
+        }
+
+        // Fallback: If no ID or edit failed, send a NEW message
+        if (!editSucceeded) {
+          await fetch(`${TELEGRAM_API}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: driverChatId,
+              text: updatedDriverMessage,
+              parse_mode: 'Markdown'
+            }),
+          });
+        }
       }
     }
 
