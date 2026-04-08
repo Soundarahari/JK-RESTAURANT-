@@ -57,36 +57,6 @@ async function updateTelegramMessage(
   }
 }
 
-// Helper: Send a message to the Delivery Drivers Telegram Group
-async function sendToDriverGroup(message: string) {
-  const driverGroupChatId = process.env.TELEGRAM_DRIVER_GROUP_CHAT_ID;
-  if (!driverGroupChatId) {
-    console.warn('TELEGRAM_DRIVER_GROUP_CHAT_ID not set, sending to main chat instead.');
-    // Fallback: send to main kitchen chat
-    const fallbackChatId = process.env.TELEGRAM_CHAT_ID;
-    if (!fallbackChatId) return;
-    await fetch(`${TELEGRAM_API}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: fallbackChatId,
-        text: message,
-        parse_mode: 'Markdown',
-      }),
-    });
-    return;
-  }
-
-  await fetch(`${TELEGRAM_API}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: driverGroupChatId,
-      text: message,
-      parse_mode: 'Markdown',
-    }),
-  });
-}
 
 // Helper: Answer callback query to dismiss Telegram loading spinner
 async function answerCallbackQuery(callbackQueryId: string, text?: string) {
