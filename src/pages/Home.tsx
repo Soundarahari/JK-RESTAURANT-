@@ -16,9 +16,9 @@ const CATEGORY_GRADIENTS: Record<string, string> = {
 
 /* ── Compact Bestseller Card ── */
 const BestsellerCard = ({ product }: { product: Product }) => {
-  const { addToCart, cart, removeFromCart, updateQuantity, user } = useStore();
+  const { addToCart, cart, removeFromCart, updateQuantity, user, appliedPromoCode } = useStore();
   const cartItem = cart.find(item => item.id === product.id);
-  const isStudentVerified = user?.is_student;
+  const isStudentVerified = user?.is_student || appliedPromoCode?.discount_type === 'student_offer';
 
   return (
     <div className="min-w-[250px] max-w-[280px] snap-start bg-white dark:bg-gray-900 rounded-2xl shadow-md border border-gray-100/50 dark:border-gray-800/50 overflow-hidden flex-shrink-0 group">

@@ -58,7 +58,8 @@ export const Checkout = () => {
     setPromoInput('');
   };
 
-  const subtotalBeforeDiscount = cart.reduce((sum, item) => sum + ((user?.is_student ? item.student_price : item.base_price) * item.quantity), 0);
+  const isStudentVerified = user?.is_student || appliedPromoCode?.discount_type === 'student_offer';
+  const subtotalBeforeDiscount = cart.reduce((sum, item) => sum + ((isStudentVerified ? item.student_price : item.base_price) * item.quantity), 0);
   const itemTotal = getTotalPrice();
   const discountAmount = subtotalBeforeDiscount - itemTotal;
   const platformFee = 5;
@@ -233,7 +234,7 @@ export const Checkout = () => {
 
       {/* Bill Summary & Promo */}
       <div className="bg-white dark:bg-gray-900 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-800 p-6 mb-6">
-        {user?.is_student ? (
+        {isStudentVerified ? (
           <div className="bg-green-50/50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/50 p-4 rounded-2xl mb-6 flex items-center justify-between">
             <div>
               <p className="font-black text-sm text-green-700 dark:text-green-400">Student Verified ✓</p>

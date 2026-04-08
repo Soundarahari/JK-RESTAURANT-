@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingCart } from 'lucide-react';
 
 export const Cart = () => {
-  const { cart, user, getTotalPrice } = useStore();
+  const { cart, user, getTotalPrice, appliedPromoCode } = useStore();
   const navigate = useNavigate();
 
-  const isStudentVerified = user?.is_student;
+  const isStudentVerified = user?.is_student || appliedPromoCode?.discount_type === 'student_offer';
   const itemTotal = getTotalPrice();
 
   if (cart.length === 0) {

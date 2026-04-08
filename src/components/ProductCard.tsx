@@ -3,9 +3,9 @@ import { useStore } from '../store';
 import { Plus, Minus, Star, Heart, Flame, Clock } from 'lucide-react';
 
 export const ProductCard = ({ product }: { product: Product }) => {
-  const { user, cart, addToCart, removeFromCart, updateQuantity } = useStore();
+  const { user, cart, addToCart, removeFromCart, updateQuantity, appliedPromoCode } = useStore();
   const cartItem = cart.find(item => item.id === product.id);
-  const isStudentVerified = user?.is_student;
+  const isStudentVerified = user?.is_student || appliedPromoCode?.discount_type === 'student_offer';
 
   return (
     <div className={`group bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100/50 dark:border-gray-800/50 flex flex-col relative ${
