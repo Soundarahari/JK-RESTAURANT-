@@ -22,12 +22,12 @@ export const Checkout = () => {
   const [selectedCollege, setSelectedCollege] = useState('');
 
   const COLLEGES = [
-    "JKKN Educational Institutions",
-    "SSM College of Engineering",
-    "Excel Group of Institutions",
-    "JKKM College",
-    "Vivekanandha Educational Institutions for Women",
-    "Other (Use GPS / Map Location)"
+    { name: "Excel Engineering College", lat: 11.446026, lng: 77.768956 },
+    { name: "Vivekanandha College of Engineering for Women", lat: 11.357938, lng: 77.943850 },
+    { name: "SSM College Of Engineering", lat: 11.440000, lng: 77.740000 },
+    { name: "JKKN College of Engineering and Technology", lat: 11.440000, lng: 77.730000 },
+    { name: "JKKM Educational Institutions Campus", lat: 11.450000, lng: 77.730000 },
+    { name: "Other (Use GPS / Map Location)", lat: null, lng: null }
   ];
 
   const UPI_ID = import.meta.env.VITE_UPI_ID || 'soundarahari@fam';
@@ -123,12 +123,19 @@ export const Checkout = () => {
     }
     
     setIsPlacingOrder(true);
+    
+    let finalLocation = userLocation || undefined;
+    const selectedCollegeData = COLLEGES.find(c => c.name === selectedCollege);
+    if (selectedCollegeData && selectedCollegeData.lat && selectedCollegeData.lng) {
+      finalLocation = { lat: selectedCollegeData.lat, lng: selectedCollegeData.lng };
+    }
+
     try {
       const { success, error } = await useStore.getState().placeOrder(
         paymentScreenshot, 
         utrNumber, 
         isTakeaway ? undefined : deliveryAddress,
-        userLocation || undefined
+        finalLocation
       );
       
       if (success) {
@@ -211,7 +218,7 @@ export const Checkout = () => {
                 className="w-full text-sm bg-gray-50 dark:bg-gray-800 border-none rounded-lg p-3 outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-gray-200 font-bold"
               >
                 <option value="">Choose Institution (Optional)</option>
-                {COLLEGES.map(c => <option key={c} value={c}>{c}</option>)}
+                {COLLEGES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
               </select>
             </div>
           )}
