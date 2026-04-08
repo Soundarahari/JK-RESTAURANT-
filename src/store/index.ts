@@ -450,7 +450,8 @@ export const useStore = create<AppState>()(
                   name: newOrder.user_name,
                   email: newOrder.user_email,
                   phone: newOrder.user_phone
-                }
+                },
+                deliveryAddress: newOrder.delivery_address
               })
             }).catch(err => console.warn('Notification API warning:', err));
           } catch (e) {

@@ -15,7 +15,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { orderId, items, totalAmount, customerContact } = req.body || {};
+    const { orderId, items, totalAmount, customerContact, deliveryAddress } = req.body || {};
 
     // Validate required fields
     if (!orderId || !items || totalAmount === undefined || !customerContact || !customerContact.email) {
@@ -119,6 +119,7 @@ export default async function handler(req: any, res: any) {
         if (customerContact.phone) {
           telegramMessage += `*Contact:* 📞 ${customerContact.phone}\n`;
         }
+        telegramMessage += `*Address:* 📍 ${deliveryAddress || 'Takeaway'}\n`;
         telegramMessage += `*Email:* ✉️ ${customerContact.email}\n`;
         telegramMessage += `━━━━━━━━━━━━━━━━━━━━\n`;
         telegramMessage += `*🛒 Order Summary:*\n`;
