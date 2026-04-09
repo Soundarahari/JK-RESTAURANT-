@@ -326,7 +326,7 @@ export const Admin = () => {
       </div>
 
       {/* Sticky Main Header */}
-      <div className="sticky top-[65px] lg:top-0 -mx-4 px-4 pt-2 sm:mx-0 sm:px-0 z-30 bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 mb-6 pb-2">
+      <div className="sticky top-[65px] -mx-4 px-4 pt-2 sm:mx-0 sm:px-0 z-30 bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 mb-6 pb-2">
         <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Dashboard</h2>
         
         <div className="flex gap-2 overflow-x-auto hide-scrollbar">

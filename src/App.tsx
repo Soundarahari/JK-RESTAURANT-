@@ -102,7 +102,7 @@ function App() {
               </div>
 
               {/* Desktop header — full width */}
-              <div className="hidden lg:flex items-center justify-between px-8 py-4">
+              <div className="hidden lg:flex items-center justify-between px-8 py-4 lg:pl-60">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-emerald-500 flex items-center justify-center shadow-lg">
                     <span className="text-white text-lg">🍽️</span>

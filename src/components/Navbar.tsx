@@ -50,7 +50,7 @@ export const Navbar = () => {
       </nav>
 
       {/* ── Desktop: left sidebar ── */}
-      <aside className="hidden lg:flex flex-col w-60 shrink-0 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 fixed top-[65px] h-[calc(100vh-65px)] transition-colors z-40">
+      <aside className="hidden lg:flex flex-col w-60 shrink-0 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 fixed top-0 h-full transition-colors z-40">
         <nav className="flex flex-col gap-1 p-4 pt-6 flex-1">
           {navItems.map(({ to, icon: Icon, label, badge }) => {
             const isActive = location.pathname === to;
