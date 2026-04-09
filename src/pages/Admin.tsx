@@ -997,6 +997,7 @@ export const Admin = () => {
                       type="file" 
                       accept="image/*" 
                       className="absolute inset-0 opacity-0 cursor-pointer" 
+                      onChange={async (e) => {
                         if (e.target.files && e.target.files[0]) {
                           const { publicUrl, error } = await uploadCategoryImage(e.target.files[0]);
                           if (publicUrl) {
@@ -1005,6 +1006,7 @@ export const Admin = () => {
                              alert(error || 'Category image upload failed.');
                           }
                         }
+                      }}
                     />
                   </div>
                 </div>
