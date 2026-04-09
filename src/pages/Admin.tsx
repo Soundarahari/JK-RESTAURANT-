@@ -232,6 +232,14 @@ export const Admin = () => {
     });
   };
 
+  // Auto-expand categories when filtering (search or category selection)
+  useEffect(() => {
+    if (menuCategoryFilter !== 'All' || menuSearch.trim() !== '') {
+      setCollapsedCategories(new Set());
+    }
+  }, [menuCategoryFilter, menuSearch]);
+
+
   
   const activeOrders = adminOrders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
   const totalRevenue = adminOrders
