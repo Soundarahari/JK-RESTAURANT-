@@ -45,12 +45,17 @@ function RouteTracker() {
 }
 
 function App() {
-  const user = useStore(state => state.user);
+  const { user, fetchProducts, fetchCategories } = useStore();
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('jk-dark-mode');
     if (saved !== null) return saved === 'true';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
+
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+  }, [fetchProducts, fetchCategories]);
 
   useEffect(() => {
     localStorage.setItem('jk-dark-mode', String(darkMode));

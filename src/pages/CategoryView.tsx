@@ -15,8 +15,8 @@ const CATEGORY_GRADIENTS: Record<string, string> = {
 
 export const CategoryView = () => {
   const { subCategoryId } = useParams<{ subCategoryId: string }>();
+  const { products, cart, user, isLoading } = useStore();
   const navigate = useNavigate();
-  const { products, cart, user } = useStore();
 
   const decodedId = decodeURIComponent(subCategoryId || '');
 
@@ -26,6 +26,15 @@ export const CategoryView = () => {
     if (bySub.length > 0) return bySub;
     return products.filter(p => p.category === decodedId);
   }, [products, decodedId]);
+
+  if (isLoading && products.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in duration-500">
+        <div className="w-12 h-12 border-4 border-brand-500/10 border-t-brand-500 rounded-full animate-spin mb-6"></div>
+        <p className="text-gray-900 dark:text-white font-black text-xs uppercase tracking-[0.2em]">Loading Menu</p>
+      </div>
+    );
+  }
 
   const isMainCategory = products.some(p => p.category === decodedId);
   const Icon = CATEGORY_ICONS[decodedId] || Utensils;

@@ -119,20 +119,43 @@ export const Admin = () => {
       .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
     if (uploadError) {
-      // If bucket doesn't exist, try 'images' bucket as fallback
       const { error: fallbackError } = await supabase.storage
         .from('images')
         .upload(filePath, file, { cacheControl: '3600', upsert: false });
       
-      if (fallbackError) {
-        console.error('Upload error:', fallbackError);
-        return null;
-      }
+      if (fallbackError) return null;
       const { data: urlData } = supabase.storage.from('images').getPublicUrl(filePath);
       return urlData.publicUrl;
     }
 
     const { data: urlData } = supabase.storage.from('category-images').getPublicUrl(filePath);
+    return urlData.publicUrl;
+  };
+
+  const uploadProductImage = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `product_${Date.now()}.${fileExt}`;
+    const filePath = `products/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('images') // Use 'images' as default bucket for products
+      .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+    if (uploadError) {
+      // Fallback
+      const { error: fallbackError } = await supabase.storage
+        .from('category-images')
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
+      
+      if (fallbackError) {
+        console.error('Upload Error:', uploadError, fallbackError);
+        return null;
+      }
+      const { data: urlData } = supabase.storage.from('category-images').getPublicUrl(filePath);
+      return urlData.publicUrl;
+    }
+
+    const { data: urlData } = supabase.storage.from('images').getPublicUrl(filePath);
     return urlData.publicUrl;
   };
 
@@ -666,9 +689,19 @@ export const Admin = () => {
                               type="file" 
                               accept="image/*" 
                               className="hidden"
-                              onChange={(e) => {
+                              onChange={async (e) => {
                                 if(e.target.files && e.target.files[0]) {
-                                  updateProduct(product.id, { image_url: URL.createObjectURL(e.target.files[0]) });
+                                  // Local preview
+                                  const localUrl = URL.createObjectURL(e.target.files[0]);
+                                  updateProduct(product.id, { image_url: localUrl });
+                                  
+                                  // Real upload
+                                  const publicUrl = await uploadProductImage(e.target.files[0]);
+                                  if (publicUrl) {
+                                    updateProduct(product.id, { image_url: publicUrl });
+                                  } else {
+                                    alert('Image upload failed, but local preview is showing. Please try again.');
+                                  }
                                 }
                               }}
                             />
@@ -1121,19 +1154,30 @@ export const Admin = () => {
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Dish Image</label>
-                <input 
-                  type="file" 
-                  accept="image/*"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setNewDish({...newDish, image_url: URL.createObjectURL(e.target.files[0])});
-                    }
-                  }}
-                  className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-2 text-sm dark:bg-gray-800 dark:text-gray-300 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" 
-                />
-                {newDish.image_url && (
-                   <img src={newDish.image_url} className="mt-2 w-16 h-16 object-cover rounded-lg" alt=""/>
-                )}
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={async (e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        // Local preview
+                        const localUrl = URL.createObjectURL(e.target.files[0]);
+                        setNewDish({...newDish, image_url: localUrl});
+                        
+                        // Store the file to upload on save OR upload now and store URL
+                        // Let's upload now and store the resulting URL in state
+                        const publicUrl = await uploadProductImage(e.target.files[0]);
+                        if (publicUrl) {
+                          setNewDish(prev => ({...prev, image_url: publicUrl}));
+                        }
+                      }
+                    }}
+                    className="flex-1 border border-gray-300 dark:border-gray-700 rounded-lg p-2 text-sm dark:bg-gray-800 dark:text-gray-300 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" 
+                  />
+                  {newDish.image_url && (
+                    <img src={newDish.image_url} className="w-12 h-12 object-cover rounded-lg border border-gray-100 shadow-sm" alt=""/>
+                  )}
+                </div>
               </div>
               <button 
                 onClick={() => {
