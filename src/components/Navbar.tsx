@@ -15,8 +15,12 @@ export const Navbar = () => {
     { to: '/', icon: Home, label: 'Menu' },
     { to: '/cart', icon: ShoppingCart, label: 'Cart', badge: cartCount },
     { to: '/profile', icon: User, label: 'Profile' },
-    ...(user?.is_driver ? [{ to: '/driver-jobs', icon: Navigation, label: 'Jobs' }] : []),
-    ...(userIsAdmin || userIsManager ? [{ to: '/admin', icon: ShieldAlert, label: 'Admin' }] : []),
+    ...(user?.is_driver ? [
+      { to: '/driver-jobs', icon: Navigation, label: 'Jobs' }
+    ] : []),
+    ...(userIsAdmin || userIsManager ? [
+      { to: '/admin', icon: ShieldAlert, label: 'Admin' }
+    ] : []),
   ];
 
   return (

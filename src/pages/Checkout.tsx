@@ -174,34 +174,33 @@ export const Checkout = () => {
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 mb-4">
           <h3 className="text-xs font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2"><Navigation size={14} /> Delivery Address</h3>
 
-          {isStudentVerified && (
-            <div className="mb-4">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Select College</label>
-              <select
-                value={selectedCollege}
-                onChange={(e) => {
-                  const newCollege = e.target.value;
-                  setSelectedCollege(newCollege);
-                  
-                  if (newCollege && newCollege !== 'Other (Use GPS / Map Location)') {
-                    setDeliveryAddress(prev => {
-                      if (prev.includes(' - ')) {
-                        const parts = prev.split(' - ');
-                        // Keep everything after the first hyphen
-                        const remaining = parts.slice(1).join(' - ');
-                        return newCollege + ' - ' + remaining;
-                      }
-                      return newCollege + ' - ' + prev;
-                    });
-                  }
-                }}
-                className="w-full text-sm bg-gray-50 dark:bg-gray-800 border-none rounded-lg p-3 outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-gray-200 font-bold"
-              >
-                <option value="">Choose Institution (Optional)</option>
-                {COLLEGES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-              </select>
-            </div>
-          )}
+          {/* College Selection - Now visible to everyone to improve usability */}
+          <div className="mb-4">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Select Institution</label>
+            <select
+              value={selectedCollege}
+              onChange={(e) => {
+                const newCollege = e.target.value;
+                setSelectedCollege(newCollege);
+                
+                if (newCollege && newCollege !== 'Other (Use GPS / Map Location)') {
+                  setDeliveryAddress(prev => {
+                    // If address already starts with a college name from our list, replace it
+                    const existingCollege = COLLEGES.find(c => prev.startsWith(c.name + ' - '));
+                    if (existingCollege) {
+                      return prev.replace(existingCollege.name + ' - ', newCollege + ' - ');
+                    }
+                    // Otherwise prepend it
+                    return newCollege + ' - ' + prev;
+                  });
+                }
+              }}
+              className="w-full text-sm bg-gray-50 dark:bg-gray-800 border-none rounded-lg p-3 outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-gray-200 font-bold"
+            >
+              <option value="">Choose Institution (Optional)</option>
+              {COLLEGES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+            </select>
+          </div>
 
           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">{isStudentVerified ? "Room/Block or Custom Address" : "Full Address"}</label>
           <textarea
