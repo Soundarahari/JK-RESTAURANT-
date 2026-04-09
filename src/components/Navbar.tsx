@@ -1,6 +1,6 @@
 import { ShoppingCart, User, Home, ShieldAlert, Navigation } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { useStore, isAdmin } from '../store';
+import { useStore, isAdmin, isRoleManager } from '../store';
 
 export const Navbar = () => {
   const cart = useStore((state) => state.cart);
@@ -9,13 +9,14 @@ export const Navbar = () => {
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const userIsAdmin = isAdmin(user);
+  const userIsManager = isRoleManager(user);
 
   const navItems = [
     { to: '/', icon: Home, label: 'Menu' },
     { to: '/cart', icon: ShoppingCart, label: 'Cart', badge: cartCount },
     { to: '/profile', icon: User, label: 'Profile' },
     ...(user?.is_driver ? [{ to: '/driver-jobs', icon: Navigation, label: 'Jobs' }] : []),
-    ...(userIsAdmin ? [{ to: '/admin', icon: ShieldAlert, label: 'Admin' }] : []),
+    ...(userIsAdmin || userIsManager ? [{ to: '/admin', icon: ShieldAlert, label: 'Admin' }] : []),
   ];
 
   return (
