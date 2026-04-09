@@ -175,11 +175,11 @@ export const useStore = create<AppState>()(
 
           // 2. Insert Default Categories
           const defaultCategories = [
-            { name: 'Meals', image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=200' },
-            { name: 'Chinese', image_url: 'https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&q=80&w=200' },
-            { name: 'Snacks', image_url: 'https://images.unsplash.com/photo-1621939514649-280e2ee62f60?auto=format&fit=crop&q=80&w=200' },
-            { name: 'Fast Food', image_url: 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?auto=format&fit=crop&q=80&w=200' },
-            { name: 'Coolers', image_url: 'https://images.unsplash.com/photo-1497515114629-f71d768fd07c?auto=format&fit=crop&q=80&w=200' },
+            { name: 'Meals', image_url: 'https://images.unsplash.com/photo-1626082895617-2c6ad3ed3c82?auto=format&fit=crop&q=80&w=200' }, // Indian thali
+            { name: 'Chinese', image_url: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&q=80&w=200' }, // Noodles
+            { name: 'Snacks', image_url: 'https://images.unsplash.com/photo-1601050690597-df0568a70950?auto=format&fit=crop&q=80&w=200' }, // Samosa
+            { name: 'Fast Food', image_url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=200' }, // Burger
+            { name: 'Coolers', image_url: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&q=80&w=200' }, // Drink
           ];
           await supabase.from('categories').insert(defaultCategories);
 
