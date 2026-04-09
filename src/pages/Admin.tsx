@@ -109,7 +109,7 @@ export const Admin = () => {
   }, [categories, derivedCategories]);
 
   // Upload category image to Supabase Storage
-  const uploadCategoryImage = async (file: File): Promise<string | null> => {
+  const uploadCategoryImage = async (file: File): Promise<{ publicUrl: string | null; error: string | null }> => {
     const fileExt = file.name.split('.').pop();
     const fileName = `category_${Date.now()}.${fileExt}`;
     const filePath = `categories/${fileName}`;
@@ -123,16 +123,19 @@ export const Admin = () => {
         .from('images')
         .upload(filePath, file, { cacheControl: '3600', upsert: false });
       
-      if (fallbackError) return null;
+      if (fallbackError) {
+        console.error('Upload error:', uploadError, fallbackError);
+        return { publicUrl: null, error: `Upload failed: ${uploadError.message} (Fallback failed: ${fallbackError.message})` };
+      }
       const { data: urlData } = supabase.storage.from('images').getPublicUrl(filePath);
-      return urlData.publicUrl;
+      return { publicUrl: urlData.publicUrl, error: null };
     }
 
     const { data: urlData } = supabase.storage.from('category-images').getPublicUrl(filePath);
-    return urlData.publicUrl;
+    return { publicUrl: urlData.publicUrl, error: null };
   };
 
-  const uploadProductImage = async (file: File): Promise<string | null> => {
+  const uploadProductImage = async (file: File): Promise<{ publicUrl: string | null; error: string | null }> => {
     const fileExt = file.name.split('.').pop();
     const fileName = `product_${Date.now()}.${fileExt}`;
     const filePath = `products/${fileName}`;
@@ -149,14 +152,14 @@ export const Admin = () => {
       
       if (fallbackError) {
         console.error('Upload Error:', uploadError, fallbackError);
-        return null;
+        return { publicUrl: null, error: `Upload failed: ${uploadError.message} (Fallback failed: ${fallbackError.message}). Ensure you have a public 'images' bucket in Supabase.` };
       }
       const { data: urlData } = supabase.storage.from('category-images').getPublicUrl(filePath);
-      return urlData.publicUrl;
+      return { publicUrl: urlData.publicUrl, error: null };
     }
 
     const { data: urlData } = supabase.storage.from('images').getPublicUrl(filePath);
-    return urlData.publicUrl;
+    return { publicUrl: urlData.publicUrl, error: null };
   };
 
   // Sync product-derived categories to DB
@@ -696,11 +699,11 @@ export const Admin = () => {
                                   updateProduct(product.id, { image_url: localUrl });
                                   
                                   // Real upload
-                                  const publicUrl = await uploadProductImage(e.target.files[0]);
+                                  const { publicUrl, error } = await uploadProductImage(e.target.files[0]);
                                   if (publicUrl) {
                                     updateProduct(product.id, { image_url: publicUrl });
                                   } else {
-                                    alert('Image upload failed, but local preview is showing. Please try again.');
+                                    alert(error || 'Image upload failed. Please try again.');
                                   }
                                 }
                               }}
@@ -994,12 +997,14 @@ export const Admin = () => {
                       type="file" 
                       accept="image/*" 
                       className="absolute inset-0 opacity-0 cursor-pointer" 
-                      onChange={async (e) => {
                         if (e.target.files && e.target.files[0]) {
-                          const url = await uploadCategoryImage(e.target.files[0]);
-                          if (url) setEditingCategory({...editingCategory!, image_url: url});
+                          const { publicUrl, error } = await uploadCategoryImage(e.target.files[0]);
+                          if (publicUrl) {
+                             setEditingCategory({...editingCategory!, image_url: publicUrl});
+                          } else {
+                             alert(error || 'Category image upload failed.');
+                          }
                         }
-                      }}
                     />
                   </div>
                 </div>
@@ -1166,9 +1171,11 @@ export const Admin = () => {
                         
                         // Store the file to upload on save OR upload now and store URL
                         // Let's upload now and store the resulting URL in state
-                        const publicUrl = await uploadProductImage(e.target.files[0]);
+                        const { publicUrl, error } = await uploadProductImage(e.target.files[0]);
                         if (publicUrl) {
                           setNewDish(prev => ({...prev, image_url: publicUrl}));
+                        } else {
+                          alert(error || 'Dish image upload failed.');
                         }
                       }
                     }}
