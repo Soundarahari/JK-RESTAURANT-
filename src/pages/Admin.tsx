@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useStore, isAdmin as checkIsAdmin, Category } from '../store';
+import { useStore, isAdmin as checkIsAdmin, isRoleManager as checkIsManager, Category, ADMIN_EMAILS } from '../store';
 import { Product } from '../data/mock';
 import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, ChevronUp, ShieldAlert, Smartphone, Maximize2, ExternalLink, Upload, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -7,11 +7,13 @@ import { supabase } from '../lib/supabase';
 
 
 export const Admin = () => {
-  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories, toggleDriverRole } = useStore();
+  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories, toggleDriverRole, toggleRoleManagerRole } = useStore();
   const navigate = useNavigate();
   
-  // 1. Admin Authorization check first
+  // 1. Authorization check
   const isAdmin = checkIsAdmin(user);
+  const isManager = checkIsManager(user);
+  const isAuthorized = isAdmin || isManager;
 
   // 2. Component State Hooks
   const [activeTab, setActiveTab] = useState<'orders' | 'promos' | 'menu' | 'users'>('orders');
@@ -40,7 +42,7 @@ export const Admin = () => {
   const [newDishSubCategory, setNewDishSubCategory] = useState('Fried Rice');
   
   const [userSearch, setUserSearch] = useState('');
-  const [selectedUser, setSelectedUserDetails] = useState<{name: string, email: string, phone: string, is_student: boolean, is_driver: boolean} | null>(null);
+  const [selectedUser, setSelectedUserDetails] = useState<{name: string, email: string, phone: string, is_student: boolean, is_driver: boolean, is_role_manager: boolean} | null>(null);
   const [enlargedScreenshot, setEnlargedScreenshot] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [originalCategoryName, setOriginalCategoryName] = useState<string>('');
@@ -61,7 +63,7 @@ export const Admin = () => {
     }
   }, [fetchProducts, fetchOrders, fetchCustomers, isAdmin]);
 
-  if (!isAdmin) {
+  if (!isAuthorized) {
     return (
       <div className="flex flex-col items-center justify-center h-[70vh] text-center px-6 animate-in fade-in zoom-in duration-300">
         <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-6 shadow-sm">
@@ -254,6 +256,7 @@ export const Admin = () => {
       phone: c.phone,
       is_student: c.is_student,
       is_driver: !!c.is_driver,
+      is_role_manager: !!c.is_role_manager,
       orderCount: adminOrders.filter(o => o.user_email === c.email).length
     }));
   }, [customers, adminOrders]);
@@ -832,7 +835,16 @@ export const Admin = () => {
                      🛵 STAFF
                    </span>
                 )}
-                <span className="text-[10px] font-bold text-gray-400">Loyalty Member</span>
+                {selectedUser.is_role_manager && (
+                   <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest bg-brand-50 dark:bg-brand-900/30 text-brand-600 border border-brand-100 dark:border-brand-900/30">
+                     🔑 MANAGER
+                   </span>
+                )}
+                {ADMIN_EMAILS.includes(selectedUser.email) && (
+                   <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest bg-gray-900 dark:bg-white text-white dark:text-gray-900 border border-gray-800 dark:border-gray-200 shadow-sm">
+                     ⚡ ADMIN
+                   </span>
+                )}
               </div>
             </div>
 
@@ -852,26 +864,51 @@ export const Admin = () => {
                 </div>
               </div>
 
-              {/* Toggle Delivery Role */}
-              <div className="pt-6 mt-2 border-t border-gray-100 dark:border-gray-800">
-                <div className="flex items-center justify-between p-4 bg-brand-50/30 dark:bg-brand-900/10 rounded-2xl border border-brand-100/50 dark:border-brand-900/30">
+              {/* Roles Management */}
+              <div className="pt-6 mt-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Privileges & Roles</p>
+                
+                {/* Manager Role */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-800">
                   <div className="flex-1">
-                    <p className="text-xs font-black text-gray-800 dark:text-white uppercase tracking-tight mb-0.5">Delivery Role</p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium leading-tight">Authorize this staff member to manage delivery jobs.</p>
+                    <p className="text-xs font-black text-gray-800 dark:text-white uppercase tracking-tight mb-0.5">Manager Access</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium leading-tight">Can manage orders, products, and most user roles.</p>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer ml-4">
+                  <label className={`relative inline-flex items-center cursor-pointer ml-4 ${ADMIN_EMAILS.includes(selectedUser.email) && !isAdmin ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={selectedUser.is_role_manager} 
+                      disabled={ADMIN_EMAILS.includes(selectedUser.email) && !isAdmin}
+                      onChange={async (e) => {
+                        const newStatus = e.target.checked;
+                        await toggleRoleManagerRole(selectedUser.email, newStatus);
+                        setSelectedUserDetails({ ...selectedUser, is_role_manager: newStatus });
+                      }} 
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-brand-500"></div>
+                  </label>
+                </div>
+
+                {/* Delivery Role */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-800">
+                  <div className="flex-1">
+                    <p className="text-xs font-black text-gray-800 dark:text-white uppercase tracking-tight mb-0.5">Staff Account</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium leading-tight">Authorize this user to accept and deliver orders.</p>
+                  </div>
+                  <label className={`relative inline-flex items-center cursor-pointer ml-4 ${ADMIN_EMAILS.includes(selectedUser.email) && !isAdmin ? 'opacity-30 cursor-not-allowed' : ''}`}>
                     <input 
                       type="checkbox" 
                       className="sr-only peer" 
                       checked={selectedUser.is_driver} 
+                      disabled={ADMIN_EMAILS.includes(selectedUser.email) && !isAdmin}
                       onChange={async (e) => {
                         const newStatus = e.target.checked;
                         await toggleDriverRole(selectedUser.email, newStatus);
-                        // Local update for modal
                         setSelectedUserDetails({ ...selectedUser, is_driver: newStatus });
                       }} 
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-brand-500"></div>
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
                   </label>
                 </div>
               </div>

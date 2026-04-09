@@ -43,6 +43,11 @@ export function isAdmin(user: UserProfile | null): boolean {
   return ADMIN_EMAILS.includes(user.email);
 }
 
+export function isRoleManager(user: UserProfile | null): boolean {
+  if (!user) return false;
+  return !!user.is_role_manager;
+}
+
 export interface UserProfile {
   id: string;
   full_name: string;
@@ -51,6 +56,7 @@ export interface UserProfile {
   avatar_url?: string;
   is_student: boolean;
   is_driver: boolean;
+  is_role_manager: boolean;
   college_name?: string;
 }
 
@@ -70,6 +76,7 @@ export interface Customer {
   avatar_url?: string;
   is_student: boolean;
   is_driver: boolean;
+  is_role_manager: boolean;
   created_at: string;
   last_login: string;
 }
@@ -125,6 +132,7 @@ interface AppState {
   seedDatabase: () => Promise<{ success: boolean; error?: string }>;
   clearOrders: () => Promise<{ success: boolean; error?: string }>;
   toggleDriverRole: (email: string, isDriver: boolean) => Promise<void>;
+  toggleRoleManagerRole: (email: string, isManager: boolean) => Promise<void>;
   acceptJob: (orderId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -251,11 +259,12 @@ export const useStore = create<AppState>()(
         
         // Try to fetch existing profile from database if local state is missing
         if (true) { // Always fetch to get latest roles
-          const { data } = await supabase.from('customers').select('phone, is_driver').eq('email', email).single();
+          const { data } = await supabase.from('customers').select('phone, is_driver, is_role_manager').eq('email', email).single();
           if (data?.phone) {
             existingPhone = data.phone;
           }
           var isDriver = data?.is_driver || false;
+          var isRoleManagerVal = data?.is_role_manager || false;
         }
         
         const studentDetected = isStudentEmail(email);
@@ -269,6 +278,7 @@ export const useStore = create<AppState>()(
             avatar_url: avatarUrl,
             is_student: studentDetected,
             is_driver: isDriver,
+            is_role_manager: isRoleManagerVal,
           }
         });
 
@@ -552,6 +562,16 @@ export const useStore = create<AppState>()(
           }));
         }
       },
+      toggleRoleManagerRole: async (email, isManager) => {
+        const { error } = await supabase.from('customers').update({ is_role_manager: isManager }).eq('email', email);
+        if (!error) {
+          set((state) => ({ 
+            customers: state.customers.map(c => c.email === email ? { ...c, is_role_manager: isManager } : c),
+            user: state.user?.email === email ? { ...state.user, is_role_manager: isManager } : state.user
+          }));
+        }
+      },
+
       acceptJob: async (orderId) => {
         const { user } = get();
         if (!user) return { success: false, error: 'Must be logged in' };
