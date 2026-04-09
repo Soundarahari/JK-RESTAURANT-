@@ -142,6 +142,7 @@ function App() {
                 pt-4 lg:pt-8
                 max-w-md mx-auto w-full
                 lg:max-w-none lg:mx-0
+                lg:pl-60
                 animate-in fade-in duration-300
                 min-h-[calc(100vh-140px)] lg:min-h-0
               ">

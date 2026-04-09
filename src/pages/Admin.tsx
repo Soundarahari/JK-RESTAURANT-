@@ -325,33 +325,36 @@ export const Admin = () => {
         </div>
       </div>
 
-      <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Dashboard</h2>
-      
-      <div className="flex gap-2 mb-6 overflow-x-auto hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-        <button 
-          onClick={() => setActiveTab('orders')}
-          className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'orders' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
-        >
-          ORDERS
-        </button>
-        <button 
-          onClick={() => setActiveTab('promos')}
-          className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'promos' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
-        >
-          PROMOS
-        </button>
-        <button 
-          onClick={() => setActiveTab('menu')}
-          className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'menu' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
-        >
-          MENU
-        </button>
-        <button 
-          onClick={() => setActiveTab('users')}
-          className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'users' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
-        >
-          USERS
-        </button>
+      {/* Sticky Main Header */}
+      <div className="sticky top-[65px] lg:top-0 -mx-4 px-4 pt-2 sm:mx-0 sm:px-0 z-30 bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 mb-6 pb-2">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Dashboard</h2>
+        
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+          <button 
+            onClick={() => setActiveTab('orders')}
+            className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'orders' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
+          >
+            ORDERS
+          </button>
+          <button 
+            onClick={() => setActiveTab('promos')}
+            className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'promos' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
+          >
+            PROMOS
+          </button>
+          <button 
+            onClick={() => setActiveTab('menu')}
+            className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'menu' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
+          >
+            MENU
+          </button>
+          <button 
+            onClick={() => setActiveTab('users')}
+            className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 ${activeTab === 'users' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
+          >
+            USERS
+          </button>
+        </div>
       </div>
 
       {activeTab === 'orders' && (
