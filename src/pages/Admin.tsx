@@ -1,13 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useStore, isAdmin as checkIsAdmin, isRoleManager as checkIsManager, Category, ADMIN_EMAILS } from '../store';
 import { Product } from '../data/mock';
-import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, ChevronUp, ShieldAlert, Smartphone, Maximize2, ExternalLink, Upload, RefreshCw } from 'lucide-react';
+import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, ChevronUp, ShieldAlert, Smartphone, Maximize2, ExternalLink, Upload, RefreshCw, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { ImageCropper } from '../components/ImageCropper';
 
 
 export const Admin = () => {
-  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories, toggleDriverRole, toggleRoleManagerRole, reorderCategories } = useStore();
+  const { products, updateProduct, addProduct, deleteProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories, toggleDriverRole, toggleRoleManagerRole, reorderCategories } = useStore();
   const navigate = useNavigate();
   
   // 1. Authorization check
@@ -49,6 +50,10 @@ export const Admin = () => {
   const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deleteConfirmProduct, setDeleteConfirmProduct] = useState<Product | null>(null);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [cropperSrc, setCropperSrc] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -740,11 +745,8 @@ export const Admin = () => {
                               className="hidden"
                               onChange={async (e) => {
                                 if(e.target.files && e.target.files[0]) {
-                                  // Local preview
                                   const localUrl = URL.createObjectURL(e.target.files[0]);
                                   updateProduct(product.id, { image_url: localUrl });
-                                  
-                                  // Real upload
                                   const { publicUrl, error } = await uploadProductImage(e.target.files[0]);
                                   if (publicUrl) {
                                     updateProduct(product.id, { image_url: publicUrl });
@@ -756,16 +758,30 @@ export const Admin = () => {
                             />
                           </label>
                         </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className={`font-bold text-sm ${product.is_available ? 'text-gray-800 dark:text-white' : 'text-gray-500'}`}>{product.name}</h4>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className={`font-bold text-sm truncate ${product.is_available ? 'text-gray-800 dark:text-white' : 'text-gray-500'}`}>{product.name}</h4>
                               <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{product.sub_category}</span>
                             </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input type="checkbox" className="sr-only peer" checked={product.is_available} onChange={(e) => updateProduct(product.id, { is_available: e.target.checked })} />
-                              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
-                            </label>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              <button
+                                onClick={() => setEditingProduct({ ...product })}
+                                className="w-7 h-7 rounded-lg bg-brand-50 dark:bg-brand-900/20 text-brand-500 flex items-center justify-center hover:bg-brand-100 transition-colors"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirmProduct(product)}
+                                className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" className="sr-only peer" checked={product.is_available} onChange={(e) => updateProduct(product.id, { is_available: e.target.checked })} />
+                                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+                              </label>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1115,6 +1131,208 @@ export const Admin = () => {
           </div>
         </div>
       )}
+
+      {/* ── Edit Product Modal ── */}
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md p-5 shadow-xl border border-gray-100 dark:border-gray-800 max-h-[90vh] overflow-y-auto">
+
+            {/* Cropper overlay within modal */}
+            {cropperSrc ? (
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-black text-base dark:text-white uppercase tracking-wider">Crop Image</h3>
+                  <button onClick={() => setCropperSrc(null)} className="text-gray-400 hover:text-red-500 transition-colors"><X size={20}/></button>
+                </div>
+                <ImageCropper
+                  imageSrc={cropperSrc}
+                  aspectRatio={1}
+                  onCancel={() => setCropperSrc(null)}
+                  onCropComplete={async (dataUrl) => {
+                    setCropperSrc(null);
+                    // Set local preview immediately
+                    setEditingProduct(prev => prev ? { ...prev, image_url: dataUrl } : prev);
+                    // Upload to Supabase
+                    try {
+                      const blob = await (await fetch(dataUrl)).blob();
+                      const file = new File([blob], `cropped_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                      const { publicUrl, error } = await uploadProductImage(file);
+                      if (publicUrl) {
+                        setEditingProduct(prev => prev ? { ...prev, image_url: publicUrl } : prev);
+                      } else {
+                        alert(error || 'Upload failed');
+                      }
+                    } catch (e) {
+                      console.error('Crop upload error:', e);
+                    }
+                  }}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between items-center mb-5">
+                  <h3 className="font-black text-base dark:text-white uppercase tracking-wider">Edit Dish</h3>
+                  <button onClick={() => setEditingProduct(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={20}/></button>
+                </div>
+
+                {/* Image preview + crop button */}
+                <div className="relative w-full h-40 rounded-xl overflow-hidden mb-4 bg-gray-100 dark:bg-gray-800 group cursor-pointer">
+                  <img
+                    src={editingProduct.image_url}
+                    alt={editingProduct.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <Upload size={20} className="text-white" />
+                    <span className="text-white text-xs font-black uppercase tracking-wider">Change & Crop Image</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            if (ev.target?.result) {
+                              setCropperSrc(ev.target.result as string);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Dish Name</label>
+                    <input
+                      type="text"
+                      value={editingProduct.name}
+                      onChange={e => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Description</label>
+                    <textarea
+                      value={editingProduct.description}
+                      rows={3}
+                      onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Sub-Category</label>
+                    <input
+                      type="text"
+                      value={editingProduct.sub_category}
+                      onChange={e => setEditingProduct({ ...editingProduct, sub_category: e.target.value })}
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Base ₹</label>
+                      <input type="number" value={editingProduct.base_price} onChange={e => setEditingProduct({ ...editingProduct, base_price: Number(e.target.value) })} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-sm dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-brand-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-brand-600 mb-1 uppercase">Student ₹</label>
+                      <input type="number" value={editingProduct.student_price} onChange={e => setEditingProduct({ ...editingProduct, student_price: Number(e.target.value) })} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-sm dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-brand-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-blue-600 mb-1 uppercase">Prep (m)</label>
+                      <input type="number" value={editingProduct.prep_time || 15} onChange={e => setEditingProduct({ ...editingProduct, prep_time: Number(e.target.value) })} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-sm dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-brand-500" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={editingProduct.is_veg} onChange={e => setEditingProduct({ ...editingProduct, is_veg: e.target.checked })} className="w-4 h-4 accent-green-500" />
+                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Veg</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={editingProduct.bestseller} onChange={e => setEditingProduct({ ...editingProduct, bestseller: e.target.checked })} className="w-4 h-4 accent-brand-500" />
+                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Bestseller</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={editingProduct.spicy} onChange={e => setEditingProduct({ ...editingProduct, spicy: e.target.checked })} className="w-4 h-4 accent-red-500" />
+                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Spicy</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button onClick={() => setEditingProduct(null)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">
+                    Cancel
+                  </button>
+                  <button
+                    disabled={isSavingProduct}
+                    onClick={async () => {
+                      if (!editingProduct) return;
+                      setIsSavingProduct(true);
+                      await updateProduct(editingProduct.id, {
+                        name: editingProduct.name,
+                        description: editingProduct.description,
+                        sub_category: editingProduct.sub_category,
+                        base_price: editingProduct.base_price,
+                        student_price: editingProduct.student_price,
+                        prep_time: editingProduct.prep_time,
+                        is_veg: editingProduct.is_veg,
+                        bestseller: editingProduct.bestseller,
+                        spicy: editingProduct.spicy,
+                        image_url: editingProduct.image_url,
+                      });
+                      setIsSavingProduct(false);
+                      setEditingProduct(null);
+                    }}
+                    className="flex-1 py-3 bg-brand-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-brand-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSavingProduct ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />Saving...</> : 'Save Changes'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Confirmation Modal ── */}
+      {deleteConfirmProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm p-6 shadow-xl border border-gray-100 dark:border-gray-800 text-center">
+            <div className="w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={26} className="text-red-500" />
+            </div>
+            <h3 className="font-black text-lg text-gray-900 dark:text-white mb-1">Delete Dish?</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+              You're about to permanently delete
+            </p>
+            <p className="font-black text-brand-600 dark:text-brand-400 mb-5">"{deleteConfirmProduct.name}"</p>
+            <p className="text-xs text-gray-400 mb-6">This action cannot be undone. The item will be removed from the menu immediately.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmProduct(null)}
+                className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await deleteProduct(deleteConfirmProduct.id);
+                  setDeleteConfirmProduct(null);
+                }}
+                className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all active:scale-95"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md p-5 shadow-xl border border-gray-100 dark:border-gray-800 max-h-[90vh] overflow-y-auto">

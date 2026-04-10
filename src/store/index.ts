@@ -133,6 +133,7 @@ interface AppState {
   fetchProducts: () => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   updateProduct: (productId: string, updates: Partial<Product>) => Promise<void>;
+  deleteProduct: (productId: string) => Promise<void>;
   fetchOrders: () => Promise<void>;
   fetchCustomers: () => Promise<void>;
   fetchUserOrders: (email: string) => Promise<void>;
@@ -428,6 +429,14 @@ export const useStore = create<AppState>()(
 
         if (error) {
           console.error('Error updating product:', error);
+        }
+      },
+      deleteProduct: async (productId) => {
+        const { error } = await supabase.from('products').delete().eq('id', productId);
+        if (!error) {
+          set((state) => ({ products: state.products.filter(p => p.id !== productId) }));
+        } else {
+          console.error('Error deleting product:', error);
         }
       },
       fetchOrders: async () => {

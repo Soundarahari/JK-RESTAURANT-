@@ -168,7 +168,7 @@ function App() {
 
               {/* Main content */}
               <main className="
-                flex-1
+                flex-1 min-w-0
                 pb-20 lg:pb-8
                 px-4 lg:px-10
                 pt-4 lg:pt-8
