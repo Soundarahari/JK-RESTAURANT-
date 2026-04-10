@@ -27,6 +27,16 @@ export function PwaBadge() {
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
+      
+      const dismissedAt = localStorage.getItem('jk-pwa-dismissed-at');
+      if (dismissedAt) {
+        const timePassed = Date.now() - parseInt(dismissedAt, 10);
+        // If less than 7 days have passed, don't show prompt
+        if (timePassed < 7 * 24 * 60 * 60 * 1000) {
+          return;
+        }
+      }
+
       setDeferredPrompt(e);
       setShowInstallPrompt(true);
     };
@@ -44,6 +54,15 @@ export function PwaBadge() {
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
+
+  useEffect(() => {
+    if (showInstallPrompt) {
+      const timer = setTimeout(() => {
+        setShowInstallPrompt(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showInstallPrompt]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -65,6 +84,7 @@ export function PwaBadge() {
 
   const closeInstall = () => {
     setShowInstallPrompt(false);
+    localStorage.setItem('jk-pwa-dismissed-at', Date.now().toString());
   };
 
   // ── Render Update Banner ──
