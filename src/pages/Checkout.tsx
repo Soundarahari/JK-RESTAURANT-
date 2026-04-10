@@ -50,7 +50,7 @@ export const Checkout = () => {
   const platformFee = 5;
   const gstAndCharges = Math.round(itemTotal * 0.05);
   const isTakeaway = orderMode === 'takeaway';
-  const activeCollege = isStudentVerified && selectedCollege && selectedCollege !== 'Other (Use GPS / Map Location)';
+  const activeCollege = selectedCollege && selectedCollege !== 'Other (Use GPS / Map Location)';
   const isTooFar = !isTakeaway && !activeCollege && distance !== null && distance > MAX_DELIVERY_RADIUS_KM;
   // If college selected, flat ₹20 delivery fee or similar, but for now logic is same
   const deliveryFee = isTakeaway ? 0 : ((distance !== null && distance <= MAX_DELIVERY_RADIUS_KM && distance > 3) ? 40 : 20);
@@ -202,9 +202,9 @@ export const Checkout = () => {
             </select>
           </div>
 
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">{isStudentVerified ? "Room/Block or Custom Address" : "Full Address"}</label>
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">{activeCollege ? "Room/Block or Custom Address" : "Full Address"}</label>
           <textarea
-            placeholder={isStudentVerified ? "E.g. Men's Hostel Block B, Room 204..." : "Enter your complete address (House No, Building, Landmark...)"}
+            placeholder={activeCollege ? "E.g. Men's Hostel Block B, Room 204..." : "Enter your complete address (House No, Building, Landmark...)"}
             value={deliveryAddress}
             onChange={(e) => setDeliveryAddress(e.target.value)}
             rows={3}

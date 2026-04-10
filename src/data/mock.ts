@@ -14,6 +14,7 @@ export interface Product {
   bestseller: boolean;
   spicy: boolean;
   prep_time: number;
+  display_order?: number;
 }
 
 export const COLLEGES = [
