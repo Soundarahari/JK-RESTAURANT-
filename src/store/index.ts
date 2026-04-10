@@ -588,65 +588,7 @@ export const useStore = create<AppState>()(
           console.error('Order update returned 0 rows — likely an RLS policy issue.');
           // Rollback optimistic update
           set({ orders: prevOrders, adminOrders: prevAdminOrders });
-          alert('Order status update failed. Your Supabase "orders" table likely needs an UPDATE policy for authenticated users.');
-        } else {
-          const updatedOrder = data[0];
-          
-          // 1. Send DB Notification to the User
-          let userMsg = `Your order is now ${status}.`;
-          if (status === 'preparing') userMsg = 'Your food is being prepared! 🍳';
-          if (status === 'ready') userMsg = 'Your order is ready! 🎉';
-          if (status === 'out_for_delivery') userMsg = 'Your order is out for delivery! 🛵';
-          if (status === 'completed') userMsg = 'Your order has been completed! Enjoy your meal. ❤️';
-          
-          supabase.from('notifications').insert([{
-            user_email: updatedOrder.user_email,
-            title: 'Order Status Updated',
-            message: userMsg,
-            link: '/profile'
-          }]).then(({ error: nErr }) => { if (nErr) console.error('User notification error:', nErr) });
-
-          // 2. Send DB Notification to Drivers if order is Ready for Delivery
-          if (status === 'ready' && updatedOrder.order_mode === 'delivery') {
-            supabase.from('notifications').insert([{
-              target_role: 'driver',
-              title: 'New Delivery Available',
-              message: `Order #${updatedOrder.id.slice(0, 5)} is ready for pickup!`,
-              link: '/delivery'
-            }]).then(({ error: nErr }) => { if (nErr) console.error('Driver notification error:', nErr) });
-          }
-
-          // 3. Trigger External Webhook (Email/Telegram) using the existing API endpoint
-          try {
-            const apiSecret = import.meta.env.VITE_ORDER_NOTIFICATION_SECRET || 'test-secret-key';
-            const appUrl = window.location.origin;
-            const apiUrl = import.meta.env.PROD 
-              ? `${appUrl}/api/order-notification` 
-              : 'http://localhost:3000/api/order-notification';
-              
-            fetch(apiUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiSecret}`
-              },
-              body: JSON.stringify({
-                orderId: updatedOrder.id,
-                items: updatedOrder.items,
-                totalAmount: updatedOrder.total_amount,
-                customerContact: {
-                  name: updatedOrder.user_name,
-                  email: updatedOrder.user_email,
-                  phone: updatedOrder.user_phone
-                },
-                deliveryAddress: updatedOrder.delivery_address,
-                status: status, // Send the updated status so the webhook knows it's an update
-                isUpdate: true 
-              })
-            }).catch(err => console.warn('Status Webhook API warning:', err));
-          } catch (e) {
-            console.error('Status Webhook API trigger error:', e);
-          }
+          alert('Order status update failed. Your Supabase "orders" table likely needs an UPDATE policy for authenticated users. Go to Supabase → Authentication → Policies → orders table → Add policy: allow UPDATE for authenticated role.');
         }
       },
       getTotalPrice: () => {
