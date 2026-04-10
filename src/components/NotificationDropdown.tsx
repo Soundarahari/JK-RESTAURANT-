@@ -1,4 +1,4 @@
-import { Bell, Check, X } from 'lucide-react';
+import { Bell, Check } from 'lucide-react';
 import { useStore } from '../store';
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
