@@ -88,6 +88,17 @@ export interface Category {
   created_at?: string;
 }
 
+export interface AppNotification {
+  id: string;
+  created_at: string;
+  user_email: string | null;
+  target_role: string | null;
+  title: string;
+  message: string;
+  is_read: boolean;
+  link: string | null;
+}
+
 interface AppState {
   user: UserProfile | null;
   cart: CartItem[];
@@ -98,6 +109,7 @@ interface AppState {
   orderMode: 'delivery' | 'takeaway';
   promos: Promo[];
   appliedPromoCode: Promo | null;
+  notifications: AppNotification[];
   setOrderMode: (mode: 'delivery' | 'takeaway') => void;
   setUser: (user: UserProfile | null) => void;
   loginWithEmail: (email: string, name: string, avatarUrl?: string) => void;
@@ -134,6 +146,10 @@ interface AppState {
   toggleDriverRole: (email: string, isDriver: boolean) => Promise<void>;
   toggleRoleManagerRole: (email: string, isManager: boolean) => Promise<void>;
   acceptJob: (orderId: string) => Promise<{ success: boolean; error?: string }>;
+  fetchNotifications: () => Promise<void>;
+  markNotificationAsRead: (id: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
+  addLocalNotification: (notification: AppNotification) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -151,11 +167,15 @@ export const useStore = create<AppState>()(
       orders: [],
       adminOrders: [],
       customers: [],
+      notifications: [],
       promos: [{ id: 'promo1', code: 'WELCOME10', discount_type: 'percentage', discount_value: 10, is_active: true }],
       appliedPromoCode: null,
       orderMode: 'delivery',
       setOrderMode: (mode) => set({ orderMode: mode }),
-      setUser: (user) => set({ user }),
+      setUser: (user) => {
+        set({ user });
+        if (user) get().fetchNotifications();
+      },
       userPhones: {},
       lastOrderTime: 0,
       isLoading: false,
@@ -448,6 +468,16 @@ export const useStore = create<AppState>()(
           if (!data || data.length === 0) throw new Error('Order was not created correctly.');
 
           set({ lastOrderTime: now });
+          
+          // Generate notification for admins
+          try {
+            await supabase.from('notifications').insert([{
+              target_role: 'admin',
+              title: 'New Order Received',
+              message: `Order #${data[0].id.slice(0, 5)} - ₹${newOrder.total_amount} placed by ${newOrder.user_name}`,
+              link: '/admin'
+            }]);
+          } catch (e) { console.error('Error inserting notification', e); }
 
         try {
           const apiSecret = import.meta.env.VITE_ORDER_NOTIFICATION_SECRET || 'test-secret-key';
@@ -599,11 +629,72 @@ export const useStore = create<AppState>()(
           });
         } catch (e) { console.error('Accept job notification error:', e); }
 
+        // Notify user via DB notification
+        try {
+          const o = get().adminOrders.find(x => x.id === orderId);
+          if (o) {
+            await supabase.from('notifications').insert([{
+              user_email: o.user_email,
+              title: 'Driver Assigned',
+              message: `${user.full_name} is on the way with your order!`,
+              link: `/track/${orderId}`
+            }]);
+          }
+        } catch (e) {}
+
         set((state) => ({
           adminOrders: state.adminOrders.map(o => o.id === orderId ? { ...o, status: 'out_for_delivery', driver_id: user.id, driver_name: user.full_name } : o)
         }));
 
         return { success: true };
+      },
+
+      // Notification Actions
+      fetchNotifications: async () => {
+        const { user } = get();
+        if (!user) return;
+        
+        let query = supabase.from('notifications').select('*').order('created_at', { ascending: false });
+        // Instead of complex OR, fetch everything potentially relevant and filter locally to simplify complex Postgres text array / OR matching across roles, or better, do an OR query.
+        
+        let orString = `user_email.eq.${user.email},target_role.eq.all`;
+        if (isAdmin(user) || isRoleManager(user)) {
+           orString += ',target_role.eq.admin';
+        }
+        if (user.is_driver) {
+           orString += ',target_role.eq.driver';
+        }
+        query = query.or(orString).limit(50);
+        
+        const { data, error } = await query;
+        if (!error && data) {
+           set({ notifications: data as AppNotification[] });
+        }
+      },
+      markNotificationAsRead: async (id) => {
+        set((state) => ({
+           notifications: state.notifications.map(n => n.id === id ? { ...n, is_read: true } : n)
+        }));
+        await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+      },
+      markAllNotificationsAsRead: async () => {
+        const { notifications, user } = get();
+        if (!user) return;
+        
+        const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+        if (unreadIds.length === 0) return;
+
+        set((state) => ({
+           notifications: state.notifications.map(n => ({ ...n, is_read: true }))
+        }));
+        
+        // Mark all owned unread as true (this might update broadcast ones for everyone, which is acceptable for a small team, or we'd need read receipts. For now, it updates the row.)
+        await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds);
+      },
+      addLocalNotification: (notification) => {
+        set((state) => ({
+          notifications: [notification, ...state.notifications]
+        }));
       }
     }),
     {

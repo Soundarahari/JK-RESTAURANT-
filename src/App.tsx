@@ -12,7 +12,9 @@ import { DriverJobs } from './pages/DriverJobs';
 import { CategoryView } from './pages/CategoryView';
 import { useState, useEffect } from 'react';
 import { Moon, Sun, User } from 'lucide-react';
-import { useStore } from './store';
+import { useStore, isAdmin, isRoleManager } from './store';
+import { supabase } from './lib/supabase';
+import { NotificationDropdown } from './components/NotificationDropdown';
 
 // Automatically scrolls to top on every route change
 function ScrollToTop() {
@@ -66,6 +68,34 @@ function App() {
     }
   }, [darkMode]);
 
+  // Listen for real-time notifications
+  useEffect(() => {
+    if (!user) return;
+    
+    const channel = supabase.channel('schema-db-changes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications'
+      }, (payload) => {
+         const newNotification = payload.new as any;
+         
+         const isForUser = newNotification.user_email === user.email;
+         const isForAll = newNotification.target_role === 'all';
+         const isForAdmin = (isAdmin(user) || isRoleManager(user)) && newNotification.target_role === 'admin';
+         const isForDriver = user.is_driver && newNotification.target_role === 'driver';
+         
+         if (isForUser || isForAll || isForAdmin || isForDriver) {
+             useStore.getState().addLocalNotification(newNotification);
+         }
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   return (
     <Router>
       <RouteTracker />
@@ -88,6 +118,7 @@ function App() {
                 </div>
                 <h1 className="text-2xl font-black text-center text-brand-600 tracking-tight">JK Restaurant</h1>
                 <div className="flex items-center gap-2">
+                  <NotificationDropdown />
                   <button onClick={() => setDarkMode(!darkMode)} className="p-2 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
                     {darkMode ? <Sun size={18} /> : <Moon size={18} />}
                   </button>
@@ -114,6 +145,7 @@ function App() {
                 </div>
                 <div className="flex items-center gap-3">
                   {/* PWA Install/Update handled by PwaBadge component */}
+                  <NotificationDropdown />
                   <button onClick={() => setDarkMode(!darkMode)} className="p-2.5 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                     {darkMode ? <Sun size={18} /> : <Moon size={18} />}
                   </button>
