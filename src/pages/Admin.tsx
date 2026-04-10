@@ -761,8 +761,19 @@ export const Admin = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start gap-2">
                             <div className="flex-1 min-w-0">
-                              <h4 className={`font-bold text-sm truncate ${product.is_available ? 'text-gray-800 dark:text-white' : 'text-gray-500'}`}>{product.name}</h4>
-                              <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{product.sub_category}</span>
+                              <div className="flex items-center gap-2">
+                                <h4 className={`font-bold text-sm truncate ${product.is_available ? 'text-gray-800 dark:text-white' : 'text-gray-500'}`}>{product.name}</h4>
+                                {product.is_veg && <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" title="Veg"></span>}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{product.sub_category}</span>
+                                {product.bestseller && (
+                                  <span className="text-[8px] font-black uppercase text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded">Bestseller</span>
+                                )}
+                                {product.spicy && (
+                                  <span className="text-[8px] font-black uppercase text-red-500 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded">Spicy</span>
+                                )}
+                              </div>
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               <button
