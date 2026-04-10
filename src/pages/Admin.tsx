@@ -260,12 +260,16 @@ export const Admin = () => {
     });
   };
 
-  // Auto-expand categories when filtering (search or category selection)
+  // Auto-expand/collapse categories when filtering (search or category selection)
   useEffect(() => {
     if (menuCategoryFilter !== 'All' || menuSearch.trim() !== '') {
-      setCollapsedCategories(new Set());
+      setCollapsedCategories(new Set()); // Expand all when filtering or searching
+    } else if (hasInitializedAccordion) {
+      // Re-collapse when returning to 'All' list
+      const allCategories = menuCategories.filter(c => c !== 'All');
+      setCollapsedCategories(new Set(allCategories));
     }
-  }, [menuCategoryFilter, menuSearch]);
+  }, [menuCategoryFilter, menuSearch, menuCategories, hasInitializedAccordion]);
 
 
   
