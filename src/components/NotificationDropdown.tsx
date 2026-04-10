@@ -35,7 +35,7 @@ export function NotificationDropdown() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-3 w-80 max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xl z-50 animate-in fade-in slide-in-from-top-4 duration-200">
+        <div className="absolute -right-14 sm:right-0 mt-3 w-[310px] sm:w-80 max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xl z-50 animate-in fade-in slide-in-from-top-4 duration-200">
           <div className="sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center justify-between z-10">
             <h3 className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wider">Notifications</h3>
             {unreadCount > 0 && (
