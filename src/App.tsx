@@ -77,7 +77,7 @@ function App() {
 
         {/* ── Main App Shell ── */}
         <Route path="*" element={
-          <div className="min-h-screen bg-gray-50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 selection:bg-brand-200 transition-colors overflow-x-hidden">
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 selection:bg-brand-200 transition-colors">
 
             {/* ── Top Header (mobile: visible / desktop: visible spanning full width) ── */}
             <header className="bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800">
@@ -102,7 +102,7 @@ function App() {
               </div>
 
               {/* Desktop header — full width */}
-              <div className="hidden lg:flex items-center justify-between px-8 py-4 lg:pl-60">
+              <div className="hidden lg:flex items-center justify-between px-8 py-4 lg:pl-[260px]">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-emerald-500 flex items-center justify-center shadow-lg">
                     <span className="text-white text-lg">🍽️</span>
@@ -129,7 +129,7 @@ function App() {
             </header>
 
             {/* ── Body: sidebar (desktop) + content ── */}
-            <div className="lg:flex lg:min-h-[calc(100vh-65px)]">
+            <div className="lg:flex lg:items-start lg:min-h-[calc(100vh-73px)]">
 
               {/* Desktop sidebar nav — hidden on mobile */}
               <Navbar />
@@ -142,7 +142,6 @@ function App() {
                 pt-4 lg:pt-8
                 max-w-md mx-auto w-full
                 lg:max-w-none lg:mx-0
-                lg:pl-60
                 animate-in fade-in duration-300
                 min-h-[calc(100vh-140px)] lg:min-h-0
               ">
