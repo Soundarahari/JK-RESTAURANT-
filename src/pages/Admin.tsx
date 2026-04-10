@@ -1146,7 +1146,7 @@ export const Admin = () => {
                 </div>
                 <ImageCropper
                   imageSrc={cropperSrc}
-                  aspectRatio={1}
+                  aspectRatio={16 / 10}
                   onCancel={() => setCropperSrc(null)}
                   onCropComplete={async (dataUrl) => {
                     setCropperSrc(null);
@@ -1175,37 +1175,46 @@ export const Admin = () => {
                   <button onClick={() => setEditingProduct(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={20}/></button>
                 </div>
 
-                {/* Image preview + crop button */}
-                <div className="relative w-full h-40 rounded-xl overflow-hidden mb-4 bg-gray-100 dark:bg-gray-800 group cursor-pointer">
-                  <img
-                    src={editingProduct.image_url}
-                    alt={editingProduct.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                    <Upload size={20} className="text-white" />
-                    <span className="text-white text-xs font-black uppercase tracking-wider">Change & Crop Image</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (ev) => {
-                            if (ev.target?.result) {
-                              setCropperSrc(ev.target.result as string);
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                        e.target.value = '';
-                      }}
+                {/* Image preview + crop/change buttons */}
+                <div className="mb-4">
+                  <div className="w-full h-40 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    <img
+                      src={editingProduct.image_url}
+                      alt={editingProduct.name}
+                      className="w-full h-full object-cover"
                     />
-                  </label>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setCropperSrc(editingProduct.image_url)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 text-xs font-black uppercase tracking-wider border border-brand-200 dark:border-brand-800 hover:bg-brand-100 transition-colors active:scale-95"
+                    >
+                      ✂️ Crop Existing
+                    </button>
+                    <label className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-black uppercase tracking-wider border border-gray-200 dark:border-gray-700 hover:bg-gray-200 transition-colors cursor-pointer active:scale-95">
+                      <Upload size={13} /> Change Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              if (ev.target?.result) {
+                                setCropperSrc(ev.target.result as string);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
-
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Dish Name</label>
