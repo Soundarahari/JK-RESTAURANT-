@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 
 
 export const Admin = () => {
-  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories, toggleDriverRole, toggleRoleManagerRole } = useStore();
+  const { products, updateProduct, addProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories, toggleDriverRole, toggleRoleManagerRole, reorderCategories } = useStore();
   const navigate = useNavigate();
   
   // 1. Authorization check
@@ -47,6 +47,8 @@ export const Admin = () => {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [originalCategoryName, setOriginalCategoryName] = useState<string>('');
   const [isSavingCategory, setIsSavingCategory] = useState(false);
+  const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
+  const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -631,9 +633,46 @@ export const Admin = () => {
             const categoryImage = categoryData?.image_url || (derivedCategories.find((sc: any) => sc.name.toLowerCase() === category.toLowerCase())?.image);
 
             return (
-              <div key={category} className="group/cat">
+              <div 
+                key={category} 
+                className={`group/cat transition-all duration-300 ${dragOverCategory === category ? 'opacity-50 scale-[0.98]' : 'opacity-100'} ${draggedCategory === category ? 'opacity-30' : ''}`}
+                draggable={!!categoryData} // Can only drag if it's synced to DB
+                onDragStart={(e) => {
+                  setDraggedCategory(category);
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (draggedCategory && categoryData) {
+                    setDragOverCategory(category);
+                    e.dataTransfer.dropEffect = 'move';
+                  }
+                }}
+                onDragLeave={() => {
+                  setDragOverCategory(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOverCategory(null);
+                  if (!draggedCategory || draggedCategory === category || !categoryData) return;
+                  
+                  // Reorder DB categories array
+                  const oldIndex = categories.findIndex(c => c.name === draggedCategory);
+                  const newIndex = categories.findIndex(c => c.name === category);
+                  
+                  if (oldIndex !== -1 && newIndex !== -1) {
+                    const newOrder = [...categories];
+                    const [moved] = newOrder.splice(oldIndex, 1);
+                    newOrder.splice(newIndex, 0, moved);
+                    reorderCategories(newOrder);
+                  }
+                  
+                  setDraggedCategory(null);
+                }}
+                onDragEnd={() => setDraggedCategory(null)}
+              >
                 {/* Category Header (collapsible) */}
-                <div className="flex gap-2 items-stretch items-center mb-2">
+                <div className={`flex gap-2 items-stretch items-center mb-2 ${categoryData ? 'cursor-grab active:cursor-grabbing' : ''}`}>
                   <button
                     onClick={() => toggleCollapse(category)}
                     className="flex-1 flex items-center justify-between bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 px-3 py-2.5 rounded-2xl transition-all hover:border-brand-200 dark:hover:border-brand-900/50 shadow-sm"

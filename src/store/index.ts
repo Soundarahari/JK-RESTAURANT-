@@ -86,6 +86,7 @@ export interface Category {
   name: string;
   image_url: string;
   created_at?: string;
+  display_order?: number;
 }
 
 export interface AppNotification {
@@ -120,6 +121,7 @@ interface AppState {
   addCategory: (category: Omit<Category, 'id' | 'created_at'>) => Promise<{ success: boolean; error?: any }>;
   updateCategory: (id: string, updates: Partial<Category>) => Promise<{ success: boolean; error?: any }>;
   deleteCategory: (id: string) => Promise<void>;
+  reorderCategories: (reorderedCategories: Category[]) => Promise<void>;
   setAppliedPromoCode: (promo: Promo | null) => void;
   addPromo: (promo: Omit<Promo, 'id'>) => void;
   deletePromo: (promoId: string) => void;
@@ -183,12 +185,15 @@ export const useStore = create<AppState>()(
       categories: [],
       fetchCategories: async () => {
         set({ isLoading: true, error: null });
-        const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
-        if (!error && data) {
-          set({ categories: data, isLoading: false });
+        let res = await supabase.from('categories').select('*').order('display_order', { ascending: true, nullsFirst: false });
+        if (res.error) {
+           res = await supabase.from('categories').select('*').order('created_at', { ascending: true });
+        }
+        if (!res.error && res.data) {
+          set({ categories: res.data, isLoading: false });
         } else {
-          console.error('Error fetching categories:', error);
-          set({ error: error?.message || 'Failed to fetch categories', isLoading: false });
+          console.error('Error fetching categories:', res.error);
+          set({ error: res.error?.message || 'Failed to fetch categories', isLoading: false });
         }
       },
       seedDatabase: async () => {
@@ -271,6 +276,19 @@ export const useStore = create<AppState>()(
         const { error } = await supabase.from('categories').delete().eq('id', id);
         if (!error) {
           set((state) => ({ categories: state.categories.filter(c => c.id !== id) }));
+        }
+      },
+      reorderCategories: async (reorderedCategories) => {
+        set({ categories: reorderedCategories });
+        const updates = reorderedCategories.map((c, index) => ({
+          ...c,
+          display_order: index,
+        }));
+        
+        const { error } = await supabase.from('categories').upsert(updates);
+        if (error) {
+           console.error('Error reordering categories:', error);
+           await get().fetchCategories();
         }
       },
       loginWithEmail: async (email, name, avatarUrl) => {
