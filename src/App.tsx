@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Link } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
+import { Footer } from './components/Footer';
 import { PwaBadge } from './components/PwaBadge';
 import { Home } from './pages/Home';
 import { Cart } from './pages/Cart';
@@ -10,6 +11,10 @@ import { TrackOrder } from './pages/TrackOrder';
 import { DriverDelivery } from './pages/DriverDelivery';
 import { DriverJobs } from './pages/DriverJobs';
 import { CategoryView } from './pages/CategoryView';
+import { TermsAndConditions } from './pages/TermsAndConditions';
+import { RefundPolicy } from './pages/RefundPolicy';
+import { ShippingPolicy } from './pages/ShippingPolicy';
+import { ContactUs } from './pages/ContactUs';
 import { useState, useEffect } from 'react';
 import { Moon, Sun, User } from 'lucide-react';
 import { useStore, isAdmin, isRoleManager } from './store';
@@ -186,7 +191,14 @@ function App() {
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/driver-jobs" element={<DriverJobs />} />
                   <Route path="/track/:orderId" element={<TrackOrder />} />
+                  <Route path="/terms" element={<TermsAndConditions />} />
+                  <Route path="/refund-policy" element={<RefundPolicy />} />
+                  <Route path="/shipping-policy" element={<ShippingPolicy />} />
+                  <Route path="/contact" element={<ContactUs />} />
                 </Routes>
+
+                {/* Footer with policy links - required for Razorpay KYC */}
+                <Footer />
               </main>
             </div>
           </div>
