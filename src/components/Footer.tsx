@@ -63,13 +63,13 @@ export const Footer = () => {
 
           {/* Quick Contact */}
           <div className="flex items-center gap-4">
-            <a href="mailto:jkrestaurant.orders@gmail.com" className="flex items-center gap-1.5 text-gray-400 hover:text-brand-500 transition-colors">
+            <a href="mailto:jkrestaurant2026@gmail.com" className="flex items-center gap-1.5 text-gray-400 hover:text-brand-500 transition-colors">
               <Mail size={12} />
-              <span className="text-[10px] font-bold hidden sm:inline">jkrestaurant.orders@gmail.com</span>
+              <span className="text-[10px] font-bold hidden sm:inline">jkrestaurant2026@gmail.com</span>
             </a>
-            <a href="tel:+919876543210" className="flex items-center gap-1.5 text-gray-400 hover:text-brand-500 transition-colors">
+            <a href="tel:+919080640408" className="flex items-center gap-1.5 text-gray-400 hover:text-brand-500 transition-colors">
               <Phone size={12} />
-              <span className="text-[10px] font-bold hidden sm:inline">+91 98765 43210</span>
+              <span className="text-[10px] font-bold hidden sm:inline">+91 90806 40408</span>
             </a>
             <div className="flex items-center gap-1.5 text-gray-400">
               <MapPin size={12} />

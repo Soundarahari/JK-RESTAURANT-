@@ -10,7 +10,7 @@ export const ContactUs = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Construct mailto link as fallback
-    const mailtoLink = `mailto:jkrestaurant.orders@gmail.com?subject=${encodeURIComponent(formData.subject)}&body=${encodeURIComponent(`Name: ${formData.name}\nEmail: ${formData.email}\n\n${formData.message}`)}`;
+    const mailtoLink = `mailto:jkrestaurant2026@gmail.com?subject=${encodeURIComponent(formData.subject)}&body=${encodeURIComponent(`Name: ${formData.name}\nEmail: ${formData.email}\n\n${formData.message}`)}`;
     window.open(mailtoLink, '_blank');
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 5000);
@@ -34,24 +34,24 @@ export const ContactUs = () => {
       <div className="space-y-4">
         {/* Contact Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <a href="mailto:jkrestaurant.orders@gmail.com" className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 flex items-start gap-4 hover:shadow-md hover:border-brand-200 dark:hover:border-brand-800 transition-all group active:scale-[0.98]">
+          <a href="mailto:jkrestaurant2026@gmail.com" className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 flex items-start gap-4 hover:shadow-md hover:border-brand-200 dark:hover:border-brand-800 transition-all group active:scale-[0.98]">
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center shadow-md shrink-0 group-hover:scale-110 transition-transform">
               <Mail size={18} className="text-white" />
             </div>
             <div>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Email Us</p>
-              <p className="text-sm font-black text-gray-900 dark:text-white break-all">jkrestaurant.orders@gmail.com</p>
+              <p className="text-sm font-black text-gray-900 dark:text-white break-all">jkrestaurant2026@gmail.com</p>
               <p className="text-[10px] text-gray-400 mt-1 font-medium">We reply within 24 hours</p>
             </div>
           </a>
 
-          <a href="tel:+919876543210" className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 flex items-start gap-4 hover:shadow-md hover:border-brand-200 dark:hover:border-brand-800 transition-all group active:scale-[0.98]">
+          <a href="tel:+919080640408" className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 flex items-start gap-4 hover:shadow-md hover:border-brand-200 dark:hover:border-brand-800 transition-all group active:scale-[0.98]">
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-md shrink-0 group-hover:scale-110 transition-transform">
               <Phone size={18} className="text-white" />
             </div>
             <div>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Call Us</p>
-              <p className="text-sm font-black text-gray-900 dark:text-white">+91 98765 43210</p>
+              <p className="text-sm font-black text-gray-900 dark:text-white">+91 90806 40408</p>
               <p className="text-[10px] text-gray-400 mt-1 font-medium">Available during operating hours</p>
             </div>
           </a>

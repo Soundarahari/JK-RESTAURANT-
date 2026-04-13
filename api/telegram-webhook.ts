@@ -163,7 +163,7 @@ export default async function handler(req: any, res: any) {
                       <p style="font-size: 16px; color: #374151;">Hi <strong>${orderData.user_name}</strong>,</p>
                       <p style="color: #4b5563; line-height: 1.6; font-size: 15px;">Great news! Your takeaway order is perfectly packed and ready to be picked up at the restaurant. See you soon!</p>
                       <div style="text-align: center; margin-top: 30px;">
-                        <a href="https://jk-restaurant-dwdp.vercel.app/track/${orderId}" style="display: inline-block; background-color: #ea580c; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold;">View Order Details</a>
+                        <a href="https://www.jkrestaurant.in/track/${orderId}" style="display: inline-block; background-color: #ea580c; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold;">View Order Details</a>
                       </div>
                     </div>
                   </div>

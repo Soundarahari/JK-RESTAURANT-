@@ -36,7 +36,7 @@ export function isStudentEmail(email: string): boolean {
   return STUDENT_DOMAINS.some(domain => email.toLowerCase().endsWith(`@${domain}`) || email.toLowerCase().includes(`.${domain}`));
 }
 
-export const ADMIN_EMAILS = ['soundarahari050@gmail.com'];
+export const ADMIN_EMAILS = ['soundarahari050@gmail.com', 'jkrestaurant2026@gmail.com'];
 
 export function isAdmin(user: UserProfile | null): boolean {
   if (!user) return false;
