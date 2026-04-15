@@ -138,7 +138,7 @@ interface AppState {
   fetchOrders: () => Promise<void>;
   fetchCustomers: () => Promise<void>;
   fetchUserOrders: (email: string) => Promise<void>;
-  placeOrder: (razorpayPaymentId: string, razorpayOrderId: string, delivery_address?: string, delivery_location?: {lat: number, lng: number}) => Promise<{ success: boolean; error?: string }>;
+  placeOrder: (razorpayPaymentId: string, razorpayOrderId: string, delivery_address?: string, delivery_location?: {lat: number, lng: number}, payment_method?: 'razorpay' | 'cod') => Promise<{ success: boolean; error?: string }>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
   getTotalPrice: () => number;
   userPhones: Record<string, string>;
@@ -500,7 +500,7 @@ export const useStore = create<AppState>()(
           console.error('Error fetching user orders:', error);
         }
       },
-      placeOrder: async (razorpayPaymentId, razorpayOrderId, delivery_address, delivery_location) => {
+      placeOrder: async (razorpayPaymentId, razorpayOrderId, delivery_address, delivery_location, payment_method = 'razorpay') => {
         try {
           const { user, cart, orderMode, getTotalPrice, lastOrderTime } = get();
           if (!user || cart.length === 0) return { success: false, error: 'No user or empty cart' };
@@ -538,7 +538,7 @@ export const useStore = create<AppState>()(
             await supabase.from('notifications').insert([{
               target_role: 'admin',
               title: 'New Order Received',
-              message: `Order #${data[0].id.slice(0, 5)} - ₹${newOrder.total_amount} placed by ${newOrder.user_name}`,
+              message: `Order #${data[0].id.slice(0, 5)} - ₹${newOrder.total_amount} placed by ${newOrder.user_name} [${payment_method === 'cod' ? '💵 COD' : '💳 Online'}]`,
               link: '/admin'
             }]);
           } catch (e) { console.error('Error inserting notification', e); }
@@ -565,7 +565,8 @@ export const useStore = create<AppState>()(
                   email: newOrder.user_email,
                   phone: newOrder.user_phone
                 },
-                deliveryAddress: newOrder.delivery_address
+                deliveryAddress: newOrder.delivery_address,
+                paymentMethod: payment_method
               })
             }).catch(err => console.warn('Notification API warning:', err));
           } catch (e) {

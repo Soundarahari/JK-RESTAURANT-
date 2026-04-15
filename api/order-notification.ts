@@ -23,7 +23,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { orderId, items, totalAmount, customerContact, deliveryAddress } = req.body || {};
+    const { orderId, items, totalAmount, customerContact, deliveryAddress, paymentMethod } = req.body || {};
 
     // Validate required fields
     if (!orderId || !items || totalAmount === undefined || !customerContact || !customerContact.email) {
@@ -87,6 +87,12 @@ export default async function handler(req: any, res: any) {
                           ₹${Number(totalAmount).toFixed(2)}
                         </td>
                       </tr>
+                      <tr>
+                        <td style="padding-top: 10px; text-align: right; font-weight: 500; color: #6b7280; font-size: 14px;">Payment:</td>
+                        <td style="padding-top: 10px; text-align: right; font-weight: 700; color: ${paymentMethod === 'cod' ? '#059669' : '#2563eb'}; font-size: 14px;">
+                          ${paymentMethod === 'cod' ? '💵 Cash on Delivery' : '💳 Paid Online (Razorpay)'}
+                        </td>
+                      </tr>
                     </tfoot>
                   </table>
                 </div>
@@ -136,6 +142,7 @@ export default async function handler(req: any, res: any) {
         });
         telegramMessage += `━━━━━━━━━━━━━━━━━━━━\n`;
         telegramMessage += `*💰 Total Amount:* ₹${Number(totalAmount).toFixed(2)}\n`;
+        telegramMessage += `*💳 Payment:* ${paymentMethod === 'cod' ? '💵 CASH ON DELIVERY' : '✅ PAID ONLINE (Razorpay)'}\n`;
         telegramMessage += `━━━━━━━━━━━━━━━━━━━━\n`;
         telegramMessage += `*Status:* 🔴 Received`;
 

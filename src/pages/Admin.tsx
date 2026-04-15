@@ -415,12 +415,21 @@ export const Admin = () => {
                    <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">
                       {order.order_mode === 'takeaway' ? '🥡 Counter Pick' : '🛵 Door Delivery'}
                    </div>
+                   <div className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                     order.utr_number === 'COD' 
+                       ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' 
+                       : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
+                   }`}>
+                      {order.utr_number === 'COD' ? '💵 COD' : '💳 Razorpay'}
+                   </div>
                 </div>
 
                 <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-50 dark:border-gray-800">
                     <div className="flex-1">
                       <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Payment Reference</p>
-                      {order.utr_number?.startsWith('pay_') ? (
+                      {order.utr_number === 'COD' ? (
+                        <p className="text-xs font-bold text-amber-600 dark:text-amber-400">💵 Cash on Delivery — Collect ₹{order.total_amount}</p>
+                      ) : order.utr_number?.startsWith('pay_') ? (
                         <p className="text-xs font-bold text-green-600 dark:text-green-400">✅ Razorpay: {order.utr_number}</p>
                       ) : (
                         <p className="text-xs font-bold text-gray-700 dark:text-gray-300">UTR: {order.utr_number || 'N/A'}</p>

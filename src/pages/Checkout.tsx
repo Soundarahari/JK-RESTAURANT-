@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
-import { Navigation, Edit3, ShoppingBag, Package, ArrowLeft, CreditCard, Shield, AlertCircle } from 'lucide-react';
+import { Navigation, Edit3, ShoppingBag, Package, ArrowLeft, CreditCard, Shield, AlertCircle, Banknote } from 'lucide-react';
 import { calculateDistance, RESTAURANT_COORDS, MAX_DELIVERY_RADIUS_KM } from '../utils/geo';
 
 // Razorpay type declaration for the global checkout script
@@ -25,6 +25,7 @@ export const Checkout = () => {
   const [promoInput, setPromoInput] = useState('');
   const [selectedCollege, setSelectedCollege] = useState('');
   const [paymentError, setPaymentError] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
   const [validationErrors, setValidationErrors] = useState<{ phone?: string; address?: string; location?: string }>({});
   const [hasAttemptedPay, setHasAttemptedPay] = useState(false);
 
@@ -182,7 +183,8 @@ export const Checkout = () => {
               response.razorpay_payment_id,
               response.razorpay_order_id,
               isTakeaway ? undefined : deliveryAddress,
-              finalLocation
+              finalLocation,
+              'razorpay'
             );
 
             if (success) {
@@ -223,6 +225,54 @@ export const Checkout = () => {
     } catch (err: any) {
       console.error('Razorpay checkout error:', err);
       setPaymentError(err.message || 'Could not initiate payment. Please try again.');
+      setIsPlacingOrder(false);
+    }
+  };
+
+  // Cash on Delivery handler
+  const handleCashOnDelivery = async () => {
+    setHasAttemptedPay(true);
+    const errors = validateForm();
+    setValidationErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      const firstErrorEl = document.querySelector('[data-validation-error]');
+      if (firstErrorEl) {
+        firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    if (!user) return;
+
+    setIsPlacingOrder(true);
+    setPaymentError('');
+
+    try {
+      let finalLocation = userLocation || undefined;
+      const selectedCollegeData = COLLEGES.find(c => c.name === selectedCollege);
+      if (selectedCollegeData && selectedCollegeData.lat && selectedCollegeData.lng) {
+        finalLocation = { lat: selectedCollegeData.lat, lng: selectedCollegeData.lng };
+      }
+
+      const { success, error } = await useStore.getState().placeOrder(
+        'COD',
+        'COD',
+        isTakeaway ? undefined : deliveryAddress,
+        finalLocation,
+        'cod'
+      );
+
+      if (success) {
+        useStore.getState().clearCart();
+        navigate('/profile');
+      } else {
+        setPaymentError(`Order Failed: ${error || 'Please try again later'}`);
+      }
+    } catch (err: any) {
+      console.error('COD order error:', err);
+      setPaymentError(err.message || 'Could not place order. Please try again.');
+    } finally {
       setIsPlacingOrder(false);
     }
   };
@@ -470,12 +520,12 @@ export const Checkout = () => {
         </div>
       </div>
 
-      {/* Payment Section — Razorpay */}
+      {/* Payment Section */}
       <div className="bg-white dark:bg-gray-900 rounded-[2rem] shadow-xl border border-gray-100 dark:border-gray-800 p-6 mb-8">
         <h3 className="font-black text-sm mb-2 text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-          <CreditCard size={16} /> Secure Payment
+          <CreditCard size={16} /> Payment Method
         </h3>
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-6 font-bold uppercase tracking-widest">Pay securely via UPI, Card, Netbanking & more</p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-5 font-bold uppercase tracking-widest">Choose how you'd like to pay</p>
 
         {/* Payment Error */}
         {paymentError && (
@@ -484,25 +534,94 @@ export const Checkout = () => {
           </div>
         )}
 
-        {/* Trust Badges */}
-        <div className="flex items-center gap-3 mb-5 bg-green-50/50 dark:bg-green-900/10 border border-green-200/50 dark:border-green-900/30 rounded-xl p-3">
-          <Shield size={18} className="text-green-600 dark:text-green-400 flex-shrink-0" />
-          <div>
-            <p className="text-[11px] font-bold text-green-700 dark:text-green-400">100% Secure Payment</p>
-            <p className="text-[10px] text-green-600/70 dark:text-green-500/70">Powered by Razorpay — UPI, Cards, Netbanking, Wallets</p>
-          </div>
+        {/* Payment Method Toggle */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          <button
+            onClick={() => setPaymentMethod('razorpay')}
+            className={`relative flex flex-col items-center gap-2.5 p-4 rounded-2xl border-2 transition-all duration-200 ${
+              paymentMethod === 'razorpay'
+                ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-900/20 shadow-lg shadow-brand-500/10'
+                : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            {paymentMethod === 'razorpay' && (
+              <div className="absolute top-2 right-2 w-5 h-5 bg-brand-500 rounded-full flex items-center justify-center">
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            )}
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              paymentMethod === 'razorpay' ? 'bg-brand-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+            }`}>
+              <CreditCard size={20} />
+            </div>
+            <div className="text-center">
+              <p className={`text-xs font-black uppercase tracking-wider ${
+                paymentMethod === 'razorpay' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-600 dark:text-gray-400'
+              }`}>Pay Online</p>
+              <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5 font-medium">UPI • Cards • Wallets</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setPaymentMethod('cod')}
+            className={`relative flex flex-col items-center gap-2.5 p-4 rounded-2xl border-2 transition-all duration-200 ${
+              paymentMethod === 'cod'
+                ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20 shadow-lg shadow-emerald-500/10'
+                : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            {paymentMethod === 'cod' && (
+              <div className="absolute top-2 right-2 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            )}
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              paymentMethod === 'cod' ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+            }`}>
+              <Banknote size={20} />
+            </div>
+            <div className="text-center">
+              <p className={`text-xs font-black uppercase tracking-wider ${
+                paymentMethod === 'cod' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400'
+              }`}>Cash on Delivery</p>
+              <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5 font-medium">Pay when you receive</p>
+            </div>
+          </button>
         </div>
 
-        {/* Payment method icons row */}
-        <div className="flex items-center justify-center gap-4 mb-5 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-          <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">UPI</span>
-          <span className="text-gray-200 dark:text-gray-600">•</span>
-          <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cards</span>
-          <span className="text-gray-200 dark:text-gray-600">•</span>
-          <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Netbanking</span>
-          <span className="text-gray-200 dark:text-gray-600">•</span>
-          <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Wallets</span>
-        </div>
+        {/* Trust Badges — contextual */}
+        {paymentMethod === 'razorpay' ? (
+          <>
+            <div className="flex items-center gap-3 mb-5 bg-green-50/50 dark:bg-green-900/10 border border-green-200/50 dark:border-green-900/30 rounded-xl p-3">
+              <Shield size={18} className="text-green-600 dark:text-green-400 flex-shrink-0" />
+              <div>
+                <p className="text-[11px] font-bold text-green-700 dark:text-green-400">100% Secure Payment</p>
+                <p className="text-[10px] text-green-600/70 dark:text-green-500/70">Powered by Razorpay — UPI, Cards, Netbanking, Wallets</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-4 mb-5 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+              <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">UPI</span>
+              <span className="text-gray-200 dark:text-gray-600">•</span>
+              <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cards</span>
+              <span className="text-gray-200 dark:text-gray-600">•</span>
+              <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Netbanking</span>
+              <span className="text-gray-200 dark:text-gray-600">•</span>
+              <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Wallets</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center gap-3 mb-5 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-900/30 rounded-xl p-3">
+            <Banknote size={18} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+            <div>
+              <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Cash on Delivery</p>
+              <p className="text-[10px] text-emerald-600/70 dark:text-emerald-500/70">Pay with cash when your order {isTakeaway ? 'is ready for pickup' : 'arrives at your doorstep'}</p>
+            </div>
+          </div>
+        )}
 
         {hasAttemptedPay && Object.keys(validationErrors).length > 0 && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-xl p-3 mb-4 flex items-start gap-2">
@@ -527,13 +646,15 @@ export const Checkout = () => {
             <p className="text-xl font-black text-gray-900 dark:text-white">₹{grandTotal}</p>
           </div>
           <button
-            onClick={handlePayWithRazorpay}
+            onClick={paymentMethod === 'cod' ? handleCashOnDelivery : handlePayWithRazorpay}
             disabled={isPlacingOrder}
             className={`flex-1 h-12 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${isPlacingOrder
               ? 'bg-gray-100 dark:bg-gray-800 text-gray-300'
               : hasAttemptedPay && Object.keys(validationErrors).length > 0
                 ? 'bg-red-500 text-white shadow-xl shadow-red-500/20 animate-pulse'
-                : 'bg-brand-500 text-white shadow-xl shadow-brand-500/20'
+                : paymentMethod === 'cod'
+                  ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/20'
+                  : 'bg-brand-500 text-white shadow-xl shadow-brand-500/20'
               }`}
           >
             {isPlacingOrder ? (
@@ -544,6 +665,8 @@ export const Checkout = () => {
                 </svg>
                 Processing...
               </>
+            ) : paymentMethod === 'cod' ? (
+              <>Place Order • ₹{grandTotal} (COD) →</>
             ) : (
               <>Pay ₹{grandTotal} →</>
             )}
