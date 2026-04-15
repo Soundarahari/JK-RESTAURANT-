@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
-import { Navigation, Edit3, ShoppingBag, Package, ArrowLeft, CreditCard, Shield } from 'lucide-react';
+import { Navigation, Edit3, ShoppingBag, Package, ArrowLeft, CreditCard, Shield, AlertCircle } from 'lucide-react';
 import { calculateDistance, RESTAURANT_COORDS, MAX_DELIVERY_RADIUS_KM } from '../utils/geo';
 
 // Razorpay type declaration for the global checkout script
@@ -25,6 +25,8 @@ export const Checkout = () => {
   const [promoInput, setPromoInput] = useState('');
   const [selectedCollege, setSelectedCollege] = useState('');
   const [paymentError, setPaymentError] = useState('');
+  const [validationErrors, setValidationErrors] = useState<{ phone?: string; address?: string; location?: string }>({});
+  const [hasAttemptedPay, setHasAttemptedPay] = useState(false);
 
   const COLLEGES = [
     { name: "Excel INSTITUTIONS", lat: 11.449777022281602, lng: 77.77186479045226 },
@@ -82,17 +84,45 @@ export const Checkout = () => {
     }
   };
 
+  // Validate all required fields and return errors
+  const validateForm = () => {
+    const errors: { phone?: string; address?: string; location?: string } = {};
+
+    if (!user || !user.phone || user.phone.trim() === '') {
+      errors.phone = 'Phone number is required. Please update it in your profile.';
+    }
+
+    if (!isTakeaway) {
+      if (!deliveryAddress || deliveryAddress.trim().length <= 5) {
+        errors.address = 'Please enter a valid delivery address (min 6 characters).';
+      }
+      if (!activeCollege && distance === null) {
+        errors.location = 'Please select an institution or verify your GPS location.';
+      }
+      if (!activeCollege && distance !== null && isTooFar) {
+        errors.location = 'You are outside our delivery zone. Please switch to Takeaway.';
+      }
+    }
+
+    return errors;
+  };
+
   // Razorpay payment handler
   const handlePayWithRazorpay = async () => {
-    if (!user || user.phone === '') {
-      navigate('/profile');
+    setHasAttemptedPay(true);
+    const errors = validateForm();
+    setValidationErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      // Scroll to first error
+      const firstErrorEl = document.querySelector('[data-validation-error]');
+      if (firstErrorEl) {
+        firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
-    if (!isTakeaway && !deliveryAddress) {
-      alert('Please enter your delivery address');
-      return;
-    }
+    if (!user) return;
 
     setIsPlacingOrder(true);
     setPaymentError('');
@@ -197,6 +227,13 @@ export const Checkout = () => {
     }
   };
 
+  // Clear validation errors in real-time as user fills fields
+  useEffect(() => {
+    if (hasAttemptedPay) {
+      setValidationErrors(validateForm());
+    }
+  }, [user?.phone, deliveryAddress, selectedCollege, distance, isTakeaway, hasAttemptedPay]);
+
   // Validation: can we proceed to pay?
   const canPay = isTakeaway
     ? true
@@ -243,8 +280,19 @@ export const Checkout = () => {
       </div>
 
       {/* Delivery Check */}
+      {/* Phone number error banner */}
+      {validationErrors.phone && (
+        <div data-validation-error className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-2xl p-4 mb-4 flex items-start gap-3 animate-in fade-in slide-in-from-top duration-300">
+          <AlertCircle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-bold text-red-600 dark:text-red-400">{validationErrors.phone}</p>
+            <button onClick={() => navigate('/profile')} className="text-[11px] font-black text-red-500 underline mt-1 uppercase tracking-wider">Go to Profile →</button>
+          </div>
+        </div>
+      )}
+
       {!isTakeaway && (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 mb-4">
+        <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-sm border ${validationErrors.address || validationErrors.location ? 'border-red-300 dark:border-red-800' : 'border-gray-100 dark:border-gray-800'} p-4 mb-4 transition-colors`}>
           <h3 className="text-xs font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2"><Navigation size={14} /> Delivery Address</h3>
 
           {/* College Selection - Now visible to everyone to improve usability */}
@@ -281,19 +329,31 @@ export const Checkout = () => {
             value={deliveryAddress}
             onChange={(e) => setDeliveryAddress(e.target.value)}
             rows={3}
-            className="w-full text-sm bg-gray-50 dark:bg-gray-800 border-none rounded-lg p-3 outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-gray-200 resize-none"
+            className={`w-full text-sm bg-gray-50 dark:bg-gray-800 rounded-lg p-3 outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-gray-200 resize-none ${validationErrors.address ? 'border-2 border-red-400 dark:border-red-600' : 'border-none'}`}
           />
+          {validationErrors.address && (
+            <div data-validation-error className="flex items-center gap-1.5 mt-2">
+              <AlertCircle size={13} className="text-red-500 flex-shrink-0" />
+              <p className="text-[11px] font-bold text-red-500">{validationErrors.address}</p>
+            </div>
+          )}
           {(!activeCollege && distance === null) ? (
             <div className="mt-4">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Check if you're within our {MAX_DELIVERY_RADIUS_KM}km delivery zone.</p>
               <button
                 onClick={handleLocate}
                 disabled={isLocating}
-                className="w-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm transition-colors"
+                className={`w-full font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm transition-colors ${validationErrors.location ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'}`}
               >
                 {isLocating ? 'Locating...' : '📍 Check My Location'}
               </button>
               {geoError && <p className="text-xs text-red-500 mt-2">{geoError}</p>}
+              {validationErrors.location && (
+                <div data-validation-error className="flex items-center gap-1.5 mt-2">
+                  <AlertCircle size={13} className="text-red-500 flex-shrink-0" />
+                  <p className="text-[11px] font-bold text-red-500">{validationErrors.location}</p>
+                </div>
+              )}
             </div>
           ) : distance !== null && (
             <div className={`mt-4 p-4 rounded-xl ${isTooFar ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50' : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50'}`}>
@@ -448,13 +508,17 @@ export const Checkout = () => {
           <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Wallets</span>
         </div>
 
-        {!canPay && !isTakeaway && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50 rounded-xl p-3 mb-4">
-            <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400">
-              {!deliveryAddress || deliveryAddress.length <= 5
-                ? '📍 Please enter your delivery address above to continue'
-                : '📍 Please verify your location is within our delivery zone'}
-            </p>
+        {hasAttemptedPay && Object.keys(validationErrors).length > 0 && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-xl p-3 mb-4 flex items-start gap-2">
+            <AlertCircle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[11px] font-bold text-red-600 dark:text-red-400">Please fix the following to continue:</p>
+              <ul className="mt-1 space-y-0.5">
+                {Object.values(validationErrors).map((err, i) => (
+                  <li key={i} className="text-[10px] text-red-500 font-medium">• {err}</li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
       </div>
@@ -468,10 +532,12 @@ export const Checkout = () => {
           </div>
           <button
             onClick={handlePayWithRazorpay}
-            disabled={!canPay || isPlacingOrder}
-            className={`flex-1 h-12 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${!canPay || isPlacingOrder
+            disabled={isPlacingOrder}
+            className={`flex-1 h-12 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${isPlacingOrder
               ? 'bg-gray-100 dark:bg-gray-800 text-gray-300'
-              : 'bg-brand-500 text-white shadow-xl shadow-brand-500/20'
+              : hasAttemptedPay && Object.keys(validationErrors).length > 0
+                ? 'bg-red-500 text-white shadow-xl shadow-red-500/20 animate-pulse'
+                : 'bg-brand-500 text-white shadow-xl shadow-brand-500/20'
               }`}
           >
             {isPlacingOrder ? (
