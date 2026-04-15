@@ -334,7 +334,7 @@ export const DriverDelivery = () => {
           
           {/* Restaurant marker */}
           <Marker position={[RESTAURANT_COORDS.lat, RESTAURANT_COORDS.lng]} icon={restaurantIcon}>
-            <Popup>JK Restaurant 🍽️</Popup>
+            <Popup>JK Restaurant</Popup>
           </Marker>
           
           {/* Customer location */}

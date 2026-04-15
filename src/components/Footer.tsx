@@ -52,9 +52,7 @@ export const Footer = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           {/* Brand */}
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-emerald-500 flex items-center justify-center shadow-sm">
-              <span className="text-white text-xs">🍽️</span>
-            </div>
+            <img src="/jk-logo.jpg" alt="Logo" className="w-8 h-8 rounded-lg shadow-sm object-cover bg-white" />
             <div>
               <p className="text-xs font-black text-gray-800 dark:text-gray-200 tracking-tight">JK Restaurant</p>
               <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-widest">Highway & Student-Friendly</p>

@@ -71,7 +71,7 @@ export const CategoryView = () => {
       {/* Products */}
       {categoryProducts.length === 0 ? (
         <div className="text-center py-16 animate-fade-in">
-          <div className="text-5xl mb-3">🍽️</div>
+          <img src="/jk-logo.jpg" alt="No items" className="w-16 h-16 mx-auto mb-3 grayscale opacity-60 rounded-full" />
           <p className="text-gray-500 dark:text-gray-400 font-semibold text-sm">No items found</p>
           <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">This category is being updated</p>
           <button onClick={() => navigate('/')}

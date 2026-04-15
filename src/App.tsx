@@ -118,11 +118,12 @@ function App() {
             <header className="bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800">
               {/* Mobile header — centred, max-w-md */}
               <div className="flex items-center justify-between p-4 max-w-md mx-auto lg:hidden">
-                <div className="w-8 h-8 flex items-center justify-center">
-                  {/* PWA Install/Update handled by PwaBadge component */}
+                <div className="flex-1"></div>
+                <div className="flex items-center justify-center gap-2">
+                  <img src="/jk-logo.jpg" alt="Logo" className="w-8 h-8 rounded-full object-cover shadow-sm bg-white" />
+                  <h1 className="text-2xl font-black text-center text-brand-600 tracking-tight">JK Restaurant</h1>
                 </div>
-                <h1 className="text-2xl font-black text-center text-brand-600 tracking-tight">JK Restaurant</h1>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-1 justify-end">
                   <NotificationDropdown />
                   <button onClick={() => setDarkMode(!darkMode)} className="p-2 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
                     {darkMode ? <Sun size={18} /> : <Moon size={18} />}
@@ -140,9 +141,7 @@ function App() {
               {/* Desktop header — full width */}
               <div className="hidden lg:flex items-center justify-between px-8 py-4 lg:pl-[260px]">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-emerald-500 flex items-center justify-center shadow-lg">
-                    <span className="text-white text-lg">🍽️</span>
-                  </div>
+                  <img src="/jk-logo.jpg" alt="Logo" className="w-11 h-11 rounded-2xl shadow-lg object-cover bg-white" />
                   <div>
                     <h1 className="text-xl font-black text-brand-600 tracking-tight leading-none">JK Restaurant</h1>
                     <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest">Highway & Student-Friendly</p>

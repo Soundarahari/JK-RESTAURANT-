@@ -201,7 +201,10 @@ export const Home = () => {
       <div className="relative -mx-4 lg:mx-0 -mt-4 lg:-mt-8 mb-6 overflow-hidden">
         <div className="bg-gradient-to-br from-brand-600 via-brand-500 to-emerald-500 px-5 lg:px-10 py-6 lg:py-10">
           <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">{greeting} 👋</p>
-          <h1 className="text-white text-2xl lg:text-3xl font-black tracking-tight">JK Restaurant 🍽️</h1>
+          <div className="flex items-center gap-2.5 mb-1.5">
+            <img src="/jk-logo.jpg" alt="Logo" className="w-10 h-10 lg:w-12 lg:h-12 rounded-full shadow-md object-cover bg-white" />
+            <h1 className="text-white text-2xl lg:text-3xl font-black tracking-tight">JK Restaurant</h1>
+          </div>
           <p className="text-white/60 text-xs mt-1 font-medium">Highway &amp; Student-Friendly Pricing</p>
 
           {/* Quick stats */}
