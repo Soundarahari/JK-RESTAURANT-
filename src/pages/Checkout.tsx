@@ -234,10 +234,6 @@ export const Checkout = () => {
     }
   }, [user?.phone, deliveryAddress, selectedCollege, distance, isTakeaway, hasAttemptedPay]);
 
-  // Validation: can we proceed to pay?
-  const canPay = isTakeaway
-    ? true
-    : ((activeCollege || (distance !== null && !isTooFar)) && (activeCollege || deliveryAddress.length > 5));
 
   // Effect to redirect if cart is empty on mount
   useEffect(() => {
