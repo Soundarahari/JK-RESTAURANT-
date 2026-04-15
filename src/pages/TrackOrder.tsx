@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowLeft, Clock, RefreshCw, FileText, ChefHat, ShoppingBag, Bike, CheckCircle2, Phone, Star, Loader2 } from 'lucide-react';
+import { ArrowLeft, Clock, RefreshCw, FileText, ChefHat, ShoppingBag, Bike, CheckCircle2, Phone, Loader2 } from 'lucide-react';
 import L from 'leaflet';
 import { RESTAURANT_COORDS } from '../utils/geo';
 import { supabase } from '../lib/supabase';
@@ -419,34 +419,37 @@ export const TrackOrder = () => {
             </div>
          </div>
 
-         {/* Driver Card Premium UI */}
+         {/* Driver Card */}
          {order?.order_mode !== 'takeaway' && orderStatus !== 'pending' && orderStatus !== 'preparing' && (
-           <div className="flex bg-white dark:bg-gray-900 p-4 rounded-3xl items-center gap-4 border border-gray-100 dark:border-gray-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-all duration-500 animate-in slide-in-from-bottom-4 mt-8 lg:mt-4">
-              <div className="relative">
-                <div className={`absolute inset-0 rounded-full ${orderStatus === 'out_for_delivery' ? 'bg-emerald-400 animate-ping opacity-20' : ''}`}></div>
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white dark:border-gray-800 shadow-sm relative z-10 bg-gray-100">
-                  <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=150" alt="Driver" className="w-full h-full object-cover" />
-                </div>
-                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 z-20 shadow-sm border border-gray-100">
-                   <div className="w-3.5 h-3.5 bg-emerald-500 rounded-full flex items-center justify-center text-white">
-                      <CheckCircle2 size={8} strokeWidth={4} />
+            <div className="flex bg-white dark:bg-gray-900 p-4 rounded-3xl items-center gap-4 border border-gray-100 dark:border-gray-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-all duration-500 animate-in slide-in-from-bottom-4 mt-8 lg:mt-4">
+               <div className="relative">
+                 <div className={`absolute inset-0 rounded-full ${orderStatus === 'out_for_delivery' ? 'bg-emerald-400 animate-ping opacity-20' : ''}`}></div>
+                 <div className="w-12 h-12 rounded-full border-2 border-white dark:border-gray-800 shadow-sm relative z-10 bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center">
+                   <span className="text-white font-black text-lg">{order.driver_name ? order.driver_name.charAt(0).toUpperCase() : '🛵'}</span>
+                 </div>
+                 {order.driver_name && (
+                   <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 z-20 shadow-sm border border-gray-100">
+                      <div className="w-3.5 h-3.5 bg-emerald-500 rounded-full flex items-center justify-center text-white">
+                         <CheckCircle2 size={8} strokeWidth={4} />
+                      </div>
                    </div>
-                </div>
-              </div>
-              <div className="flex-1">
-                 <h4 className="font-black text-sm text-gray-900 dark:text-white tracking-tight">Surya Kumar</h4>
+                 )}
+               </div>
+               <div className="flex-1">
+                 <h4 className="font-black text-sm text-gray-900 dark:text-white tracking-tight">{order.driver_name || 'Assigning Driver...'}</h4>
                  <p className="text-[10px] text-gray-500 font-bold flex items-center gap-1.5 mt-0.5 uppercase tracking-widest">
-                   <span className="flex items-center text-amber-500 bg-amber-50 dark:bg-amber-900/30 px-1 rounded"><Star size={8} fill="currentColor" className="mr-0.5" /> 4.9</span> 
-                   {hasRealGPS ? <span className="text-emerald-500">Live GPS</span> : 'Verified Partner'}
+                   {hasRealGPS ? <span className="text-emerald-500">Live GPS</span> : order.driver_name ? 'JK Delivery Partner' : 'Waiting for pickup'}
                  </p>
-              </div>
-              <div className="flex gap-2">
-                <a href="tel:+919080640408" className="w-10 h-10 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shadow-sm transition-colors active:scale-95">
-                   <Phone size={14} fill="currentColor" />
-                </a>
-              </div>
-           </div>
-         )}
+               </div>
+               {order.user_phone && (
+                 <div className="flex gap-2">
+                   <a href={`tel:${order.user_phone}`} className="w-10 h-10 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shadow-sm transition-colors active:scale-95">
+                      <Phone size={14} fill="currentColor" />
+                   </a>
+                 </div>
+               )}
+            </div>
+          )}
       </div>
     </div>
   );
