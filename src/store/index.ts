@@ -122,10 +122,11 @@ interface AppState {
   updateCategory: (id: string, updates: Partial<Category>) => Promise<{ success: boolean; error?: any }>;
   deleteCategory: (id: string) => Promise<void>;
   reorderCategories: (reorderedCategories: Category[]) => Promise<void>;
+  fetchPromos: () => Promise<void>;
   setAppliedPromoCode: (promo: Promo | null) => void;
-  addPromo: (promo: Omit<Promo, 'id'>) => void;
-  deletePromo: (promoId: string) => void;
-  togglePromo: (promoId: string, isActive: boolean) => void;
+  addPromo: (promo: Omit<Promo, 'id'>) => Promise<void>;
+  deletePromo: (promoId: string) => Promise<void>;
+  togglePromo: (promoId: string, isActive: boolean) => Promise<void>;
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -171,7 +172,7 @@ export const useStore = create<AppState>()(
       adminOrders: [],
       customers: [],
       notifications: [],
-      promos: [{ id: 'promo1', code: 'WELCOME10', discount_type: 'percentage', discount_value: 10, is_active: true }],
+      promos: [],
       appliedPromoCode: null,
       orderMode: 'delivery',
       setOrderMode: (mode) => set({ orderMode: mode }),
@@ -358,11 +359,47 @@ export const useStore = create<AppState>()(
       },
       
       setAppliedPromoCode: (promo) => set({ appliedPromoCode: promo }),
-      addPromo: (promo) => set((state) => ({ promos: [...state.promos, { ...promo, id: `promo_${Date.now()}` }] })),
-      deletePromo: (promoId) => set((state) => ({ promos: state.promos.filter(p => p.id !== promoId) })),
-      togglePromo: (promoId, is_active) => set((state) => ({ 
-        promos: state.promos.map(p => p.id === promoId ? { ...p, is_active } : p) 
-      })),
+
+      fetchPromos: async () => {
+        const { data, error } = await supabase.from('promos').select('*').order('created_at', { ascending: false });
+        if (!error && data) {
+          set({ promos: data as Promo[] });
+        } else {
+          console.error('Error fetching promos:', error);
+        }
+      },
+
+      addPromo: async (promo) => {
+        const { data, error } = await supabase.from('promos').insert([promo]).select();
+        if (!error && data) {
+          set((state) => ({ promos: [data[0] as Promo, ...state.promos] }));
+        } else {
+          console.error('Error adding promo:', error);
+          alert('Failed to add promo: ' + (error?.message || 'Unknown error'));
+        }
+      },
+
+      deletePromo: async (promoId) => {
+        // Optimistic UI update
+        set((state) => ({ promos: state.promos.filter(p => p.id !== promoId) }));
+        const { error } = await supabase.from('promos').delete().eq('id', promoId);
+        if (error) {
+          console.error('Error deleting promo:', error);
+          await get().fetchPromos(); // Revert on failure
+        }
+      },
+
+      togglePromo: async (promoId, is_active) => {
+        // Optimistic UI update
+        set((state) => ({ 
+          promos: state.promos.map(p => p.id === promoId ? { ...p, is_active } : p) 
+        }));
+        const { error } = await supabase.from('promos').update({ is_active }).eq('id', promoId);
+        if (error) {
+           console.error('Error toggling promo:', error);
+           await get().fetchPromos(); // Revert on failure
+        }
+      },
 
       addToCart: (product) => set((state) => {
         const existingItem = state.cart.find(item => item.id === product.id);
@@ -730,7 +767,7 @@ export const useStore = create<AppState>()(
         user: state.user,
         cart: state.cart,
         orderMode: state.orderMode,
-        promos: state.promos,
+        // No longer persisting promos in local storage since they are pulled from DB
       }),
     }
   )

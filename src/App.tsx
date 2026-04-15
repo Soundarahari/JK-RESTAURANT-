@@ -52,7 +52,7 @@ function RouteTracker() {
 }
 
 function App() {
-  const { user, fetchProducts, fetchCategories } = useStore();
+  const { user, fetchProducts, fetchCategories, fetchPromos } = useStore();
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('jk-dark-mode');
     if (saved !== null) return saved === 'true';
@@ -62,7 +62,8 @@ function App() {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
-  }, [fetchProducts, fetchCategories]);
+    fetchPromos();
+  }, [fetchProducts, fetchCategories, fetchPromos]);
 
   useEffect(() => {
     localStorage.setItem('jk-dark-mode', String(darkMode));
