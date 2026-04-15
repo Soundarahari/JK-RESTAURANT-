@@ -18,8 +18,8 @@ export interface Order {
   total_amount: number;
   order_mode: 'delivery' | 'takeaway';
   status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'out_for_delivery';
-  payment_screenshot_url: string | null;
-  utr_number: string | null;
+  payment_screenshot_url: string | null; // stores razorpay_order_id for new orders
+  utr_number: string | null; // stores razorpay_payment_id for new orders
   created_at: string;
   delivery_address?: string;
   delivery_location?: { lat: number, lng: number } | null;
@@ -137,7 +137,7 @@ interface AppState {
   fetchOrders: () => Promise<void>;
   fetchCustomers: () => Promise<void>;
   fetchUserOrders: (email: string) => Promise<void>;
-  placeOrder: (paymentScreenshot: string, utrNumber: string, delivery_address?: string, delivery_location?: {lat: number, lng: number}) => Promise<{ success: boolean; error?: string }>;
+  placeOrder: (razorpayPaymentId: string, razorpayOrderId: string, delivery_address?: string, delivery_location?: {lat: number, lng: number}) => Promise<{ success: boolean; error?: string }>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
   getTotalPrice: () => number;
   userPhones: Record<string, string>;
@@ -463,7 +463,7 @@ export const useStore = create<AppState>()(
           console.error('Error fetching user orders:', error);
         }
       },
-      placeOrder: async (paymentScreenshot, utrNumber, delivery_address, delivery_location) => {
+      placeOrder: async (razorpayPaymentId, razorpayOrderId, delivery_address, delivery_location) => {
         try {
           const { user, cart, orderMode, getTotalPrice, lastOrderTime } = get();
           if (!user || cart.length === 0) return { success: false, error: 'No user or empty cart' };
@@ -483,8 +483,8 @@ export const useStore = create<AppState>()(
             total_amount: getTotalPrice(),
             order_mode: orderMode,
             status: 'pending',
-            payment_screenshot_url: paymentScreenshot || null,
-            utr_number: utrNumber || null,
+            payment_screenshot_url: razorpayOrderId || null, // Razorpay order ID
+            utr_number: razorpayPaymentId || null, // Razorpay payment ID
             delivery_address: delivery_address || null,
             delivery_location: delivery_location || null,
           };

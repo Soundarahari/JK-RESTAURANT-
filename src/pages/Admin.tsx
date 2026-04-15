@@ -420,9 +420,16 @@ export const Admin = () => {
                 <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-50 dark:border-gray-800">
                     <div className="flex-1">
                       <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Payment Reference</p>
-                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300">UTR: {order.utr_number || 'N/A'}</p>
+                      {order.utr_number?.startsWith('pay_') ? (
+                        <p className="text-xs font-bold text-green-600 dark:text-green-400">✅ Razorpay: {order.utr_number}</p>
+                      ) : (
+                        <p className="text-xs font-bold text-gray-700 dark:text-gray-300">UTR: {order.utr_number || 'N/A'}</p>
+                      )}
+                      {order.payment_screenshot_url?.startsWith('order_') && (
+                        <p className="text-[10px] text-gray-400 mt-0.5">Order: {order.payment_screenshot_url}</p>
+                      )}
                     </div>
-                    {order.payment_screenshot_url && (
+                    {order.payment_screenshot_url && !order.payment_screenshot_url.startsWith('order_') && (
                       <button 
                         onClick={() => setEnlargedScreenshot(order.payment_screenshot_url)}
                         className="flex items-center gap-1.5 text-[10px] font-black text-brand-500 bg-brand-50 dark:bg-brand-900/20 px-3 py-1.5 rounded-lg active:scale-95 transition-all"

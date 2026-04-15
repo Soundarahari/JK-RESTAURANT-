@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
-import { Navigation, Edit3, ShoppingBag, Package, Copy, ArrowLeft } from 'lucide-react';
+import { Navigation, Edit3, ShoppingBag, Package, ArrowLeft, CreditCard, Shield } from 'lucide-react';
 import { calculateDistance, RESTAURANT_COORDS, MAX_DELIVERY_RADIUS_KM } from '../utils/geo';
 
+// Razorpay type declaration for the global checkout script
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 export const Checkout = () => {
   const { cart, user, orderMode, setOrderMode, getTotalPrice, promos, appliedPromoCode, setAppliedPromoCode } = useStore();
@@ -13,12 +19,12 @@ export const Checkout = () => {
   const [geoError, setGeoError] = useState('');
   const [isLocating, setIsLocating] = useState(false);
 
-  const [utrNumber, setUtrNumber] = useState('');
   const [cookingInstructions, setCookingInstructions] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [promoInput, setPromoInput] = useState('');
   const [selectedCollege, setSelectedCollege] = useState('');
+  const [paymentError, setPaymentError] = useState('');
 
   const COLLEGES = [
     { name: "Excel INSTITUTIONS", lat: 11.449777022281602, lng: 77.77186479045226 },
@@ -28,10 +34,6 @@ export const Checkout = () => {
     { name: "JKKM Educational Institutions", lat: 11.445028710223212, lng: 77.72766349669432 },
     { name: "Other (Use GPS / Map Location)", lat: null, lng: null }
   ];
-
-  const UPI_ID = import.meta.env.VITE_UPI_ID || 'soundarahari@fam';
-
-
 
   const handleApplyPromo = () => {
     const promo = promos.find(p => p.code.toUpperCase() === promoInput.toUpperCase() && p.is_active);
@@ -52,7 +54,6 @@ export const Checkout = () => {
   const isTakeaway = orderMode === 'takeaway';
   const activeCollege = selectedCollege && selectedCollege !== 'Other (Use GPS / Map Location)';
   const isTooFar = !isTakeaway && !activeCollege && distance !== null && distance > MAX_DELIVERY_RADIUS_KM;
-  // If college selected, flat ₹20 delivery fee or similar, but for now logic is same
   const deliveryFee = isTakeaway ? 0 : ((distance !== null && distance <= MAX_DELIVERY_RADIUS_KM && distance > 3) ? 40 : 20);
 
   const grandTotal = itemTotal + (isTakeaway ? 0 : platformFee) + gstAndCharges + deliveryFee;
@@ -81,13 +82,12 @@ export const Checkout = () => {
     }
   };
 
-  const handlePlaceOrder = async () => {
+  // Razorpay payment handler
+  const handlePayWithRazorpay = async () => {
     if (!user || user.phone === '') {
       navigate('/profile');
       return;
     }
-
-
 
     if (!isTakeaway && !deliveryAddress) {
       alert('Please enter your delivery address');
@@ -95,39 +95,112 @@ export const Checkout = () => {
     }
 
     setIsPlacingOrder(true);
-
-    let finalLocation = userLocation || undefined;
-    const selectedCollegeData = COLLEGES.find(c => c.name === selectedCollege);
-    if (selectedCollegeData && selectedCollegeData.lat && selectedCollegeData.lng) {
-      finalLocation = { lat: selectedCollegeData.lat, lng: selectedCollegeData.lng };
-    }
+    setPaymentError('');
 
     try {
-      const { success, error } = await useStore.getState().placeOrder(
-        '',  // no screenshot needed
-        utrNumber,
-        isTakeaway ? undefined : deliveryAddress,
-        finalLocation
-      );
+      // Step 1: Create Razorpay order on our server
+      const appUrl = window.location.origin;
+      const apiUrl = import.meta.env.PROD
+        ? `${appUrl}/api/razorpay-order`
+        : '/api/razorpay-order';
 
-      if (success) {
-        useStore.getState().clearCart();
-        navigate('/profile');
-      } else {
-        alert(`Order Failed: ${error || 'Please try again later'}`);
+      const orderRes = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: grandTotal })
+      });
+
+      if (!orderRes.ok) {
+        const errorData = await orderRes.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error (${orderRes.status})`);
       }
+
+      const orderData = await orderRes.json();
+
+      // Step 2: Open Razorpay checkout popup
+      const razorpayKeyId = orderData.key_id || import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+      if (!razorpayKeyId) {
+        throw new Error('Payment gateway configuration error. Please contact support.');
+      }
+
+      const options = {
+        key: razorpayKeyId,
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
+        name: 'JK Restaurant',
+        description: `Order - ${cart.length} item(s)`,
+        order_id: orderData.id,
+        prefill: {
+          name: user.full_name,
+          email: user.email,
+          contact: user.phone,
+        },
+        theme: {
+          color: '#f97316', // brand-500 orange
+        },
+        handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
+          // Step 3: Payment successful — place order in our system
+          try {
+            let finalLocation = userLocation || undefined;
+            const selectedCollegeData = COLLEGES.find(c => c.name === selectedCollege);
+            if (selectedCollegeData && selectedCollegeData.lat && selectedCollegeData.lng) {
+              finalLocation = { lat: selectedCollegeData.lat, lng: selectedCollegeData.lng };
+            }
+
+            const { success, error } = await useStore.getState().placeOrder(
+              response.razorpay_payment_id,
+              response.razorpay_order_id,
+              isTakeaway ? undefined : deliveryAddress,
+              finalLocation
+            );
+
+            if (success) {
+              useStore.getState().clearCart();
+              navigate('/profile');
+            } else {
+              setPaymentError(`Order Failed: ${error || 'Please try again later'}`);
+              alert(`Payment was received but order failed to save: ${error || 'Please contact support with your payment ID: ' + response.razorpay_payment_id}`);
+            }
+          } catch (err: any) {
+            console.error('Post-payment error:', err);
+            setPaymentError(`Payment received but order failed. Payment ID: ${response.razorpay_payment_id}. Please contact support.`);
+          } finally {
+            setIsPlacingOrder(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setIsPlacingOrder(false);
+          }
+        }
+      };
+
+      if (!window.Razorpay) {
+        throw new Error('Payment gateway failed to load. Please refresh the page and try again.');
+      }
+
+      const rzp = new window.Razorpay(options);
+
+      rzp.on('payment.failed', (response: any) => {
+        console.error('Razorpay payment failed:', response.error);
+        setPaymentError(response.error?.description || 'Payment failed. Please try again.');
+        setIsPlacingOrder(false);
+      });
+
+      rzp.open();
+
     } catch (err: any) {
-      console.error('Checkout error:', err);
-      alert(`Order Failed: ${err.message || 'Network error'}`);
-    } finally {
+      console.error('Razorpay checkout error:', err);
+      setPaymentError(err.message || 'Could not initiate payment. Please try again.');
       setIsPlacingOrder(false);
     }
   };
 
-  const canPlaceOrder = isTakeaway
-    ? (utrNumber.length >= 6)
-    : ((activeCollege || (distance !== null && !isTooFar)) && utrNumber.length >= 6 && (activeCollege || deliveryAddress.length > 5));
-
+  // Validation: can we proceed to pay?
+  const canPay = isTakeaway
+    ? true
+    : ((activeCollege || (distance !== null && !isTooFar)) && (activeCollege || deliveryAddress.length > 5));
 
   // Effect to redirect if cart is empty on mount
   useEffect(() => {
@@ -341,46 +414,49 @@ export const Checkout = () => {
         </div>
       </div>
 
-      {/* Payment Proof Section */}
+      {/* Payment Section — Razorpay */}
       <div className="bg-white dark:bg-gray-900 rounded-[2rem] shadow-xl border border-gray-100 dark:border-gray-800 p-6 mb-8">
-        <h3 className="font-black text-sm mb-2 text-gray-900 dark:text-white uppercase tracking-wider">Payment via UPI</h3>
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-6 font-bold uppercase tracking-widest">Pay securely using any UPI app</p>
+        <h3 className="font-black text-sm mb-2 text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+          <CreditCard size={16} /> Secure Payment
+        </h3>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-6 font-bold uppercase tracking-widest">Pay securely via UPI, Card, Netbanking & more</p>
 
-        <a
-          href={`upi://pay?pa=${UPI_ID}&pn=JKRestaurant&am=${grandTotal}&cu=INR`}
-          className="w-full bg-[#6528df] text-white font-black py-4 rounded-2xl flex items-center justify-center mb-4 cursor-pointer hover:bg-opacity-90 shadow-xl shadow-[#6528df]/20 transition-all active:scale-95 text-sm"
-        >
-          Pay ₹{grandTotal} with UPI App
-        </a>
-
-        <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-3 mb-6">
-          <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{UPI_ID}</p>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(UPI_ID);
-              alert('UPI ID copied!');
-            }}
-            className="flex items-center gap-1.5 bg-white dark:bg-gray-700 px-3 py-1.5 rounded-lg shadow-sm text-xs font-bold text-gray-600 dark:text-gray-300"
-          >
-            <Copy size={12} /> Copy
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <p className="text-[10px] font-black mb-2 text-gray-400 uppercase tracking-widest">Transaction UTR Number</p>
-            <input
-              type="text"
-              placeholder="Enter 12-digit UTR Number"
-              value={utrNumber}
-              onChange={(e) => setUtrNumber(e.target.value.replace(/[^0-9]/g, '').slice(0, 16))}
-              maxLength={16}
-              className="w-full text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 outline-none focus:ring-1 focus:ring-brand-500 font-bold"
-            />
+        {/* Payment Error */}
+        {paymentError && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-xl p-4 mb-4">
+            <p className="text-xs font-bold text-red-600 dark:text-red-400">{paymentError}</p>
           </div>
+        )}
 
-
+        {/* Trust Badges */}
+        <div className="flex items-center gap-3 mb-5 bg-green-50/50 dark:bg-green-900/10 border border-green-200/50 dark:border-green-900/30 rounded-xl p-3">
+          <Shield size={18} className="text-green-600 dark:text-green-400 flex-shrink-0" />
+          <div>
+            <p className="text-[11px] font-bold text-green-700 dark:text-green-400">100% Secure Payment</p>
+            <p className="text-[10px] text-green-600/70 dark:text-green-500/70">Powered by Razorpay — UPI, Cards, Netbanking, Wallets</p>
+          </div>
         </div>
+
+        {/* Payment method icons row */}
+        <div className="flex items-center justify-center gap-4 mb-5 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+          <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">UPI</span>
+          <span className="text-gray-200 dark:text-gray-600">•</span>
+          <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cards</span>
+          <span className="text-gray-200 dark:text-gray-600">•</span>
+          <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Netbanking</span>
+          <span className="text-gray-200 dark:text-gray-600">•</span>
+          <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Wallets</span>
+        </div>
+
+        {!canPay && !isTakeaway && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50 rounded-xl p-3 mb-4">
+            <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400">
+              {!deliveryAddress || deliveryAddress.length <= 5
+                ? '📍 Please enter your delivery address above to continue'
+                : '📍 Please verify your location is within our delivery zone'}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Floating Action Bar */}
@@ -391,14 +467,24 @@ export const Checkout = () => {
             <p className="text-xl font-black text-gray-900 dark:text-white">₹{grandTotal}</p>
           </div>
           <button
-            onClick={handlePlaceOrder}
-            disabled={!canPlaceOrder || isPlacingOrder}
-            className={`flex-1 h-12 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${!canPlaceOrder || isPlacingOrder
+            onClick={handlePayWithRazorpay}
+            disabled={!canPay || isPlacingOrder}
+            className={`flex-1 h-12 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${!canPay || isPlacingOrder
               ? 'bg-gray-100 dark:bg-gray-800 text-gray-300'
               : 'bg-brand-500 text-white shadow-xl shadow-brand-500/20'
               }`}
           >
-            {isPlacingOrder ? 'Processing...' : 'Place Order →'}
+            {isPlacingOrder ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+              </>
+            ) : (
+              <>Pay ₹{grandTotal} →</>
+            )}
           </button>
         </div>
       </div>
