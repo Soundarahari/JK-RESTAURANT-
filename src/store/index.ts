@@ -805,21 +805,18 @@ export const useStore = create<AppState>()(
 
       updateSiteSetting: async (key, value) => {
         try {
+          // Use upsert to handle both insert and update in one call
           const { error } = await supabase
             .from('site_settings')
-            .update({ value, updated_at: new Date().toISOString() })
-            .eq('key', key);
+            .upsert(
+              { key, value, updated_at: new Date().toISOString() },
+              { onConflict: 'key' }
+            )
+            .select();
 
           if (error) {
-            // If row doesn't exist yet, insert it
-            const { error: insertError } = await supabase
-              .from('site_settings')
-              .insert({ key, value })
-              .select();
-            if (insertError) {
-              console.error('Error upserting site_setting:', insertError);
-              return { success: false, error: insertError.message };
-            }
+            console.error('Error upserting site_setting:', error);
+            return { success: false, error: error.message };
           }
 
           // Update local state immediately
