@@ -100,10 +100,27 @@ export interface AppNotification {
   link: string | null;
 }
 
+export interface SiteSettings {
+  platform_fee: number;
+  gst_rate: number;
+  delivery_fee_near: number;
+  delivery_fee_far: number;
+  delivery_fee_threshold_km: number;
+}
+
+export const DEFAULT_SITE_SETTINGS: SiteSettings = {
+  platform_fee: 5,
+  gst_rate: 5,
+  delivery_fee_near: 20,
+  delivery_fee_far: 40,
+  delivery_fee_threshold_km: 3,
+};
+
 interface AppState {
   user: UserProfile | null;
   cart: CartItem[];
   products: Product[];
+  siteSettings: SiteSettings;
   orders: Order[];
   adminOrders: Order[];
   customers: Customer[];
@@ -154,6 +171,8 @@ interface AppState {
   markNotificationAsRead: (id: string) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
   addLocalNotification: (notification: AppNotification) => void;
+  fetchSiteSettings: () => Promise<void>;
+  updateSiteSetting: (key: string, value: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const useStore = create<AppState>()(
@@ -174,6 +193,7 @@ export const useStore = create<AppState>()(
       notifications: [],
       promos: [],
       appliedPromoCode: null,
+      siteSettings: { ...DEFAULT_SITE_SETTINGS },
       orderMode: 'delivery',
       setOrderMode: (mode) => set({ orderMode: mode }),
       setUser: (user) => {
@@ -760,6 +780,60 @@ export const useStore = create<AppState>()(
         set((state) => ({
           notifications: [notification, ...state.notifications]
         }));
+      },
+
+      fetchSiteSettings: async () => {
+        try {
+          const { data, error } = await supabase.from('site_settings').select('key, value');
+          if (error) {
+            console.error('Error fetching site_settings:', error);
+            return;
+          }
+          if (data && data.length > 0) {
+            const settings = { ...DEFAULT_SITE_SETTINGS };
+            data.forEach((row: { key: string; value: string }) => {
+              if (row.key in settings) {
+                (settings as any)[row.key] = parseFloat(row.value) || 0;
+              }
+            });
+            set({ siteSettings: settings });
+          }
+        } catch (err) {
+          console.error('fetchSiteSettings error:', err);
+        }
+      },
+
+      updateSiteSetting: async (key, value) => {
+        try {
+          const { error } = await supabase
+            .from('site_settings')
+            .update({ value, updated_at: new Date().toISOString() })
+            .eq('key', key);
+
+          if (error) {
+            // If row doesn't exist yet, insert it
+            const { error: insertError } = await supabase
+              .from('site_settings')
+              .insert({ key, value })
+              .select();
+            if (insertError) {
+              console.error('Error upserting site_setting:', insertError);
+              return { success: false, error: insertError.message };
+            }
+          }
+
+          // Update local state immediately
+          set((state) => ({
+            siteSettings: {
+              ...state.siteSettings,
+              [key]: parseFloat(value) || 0,
+            }
+          }));
+          return { success: true };
+        } catch (err: any) {
+          console.error('updateSiteSetting error:', err);
+          return { success: false, error: err.message };
+        }
       }
     }),
     {

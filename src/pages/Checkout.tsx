@@ -12,7 +12,7 @@ declare global {
 }
 
 export const Checkout = () => {
-  const { cart, user, orderMode, setOrderMode, getTotalPrice, promos, appliedPromoCode, setAppliedPromoCode } = useStore();
+  const { cart, user, orderMode, setOrderMode, getTotalPrice, promos, appliedPromoCode, setAppliedPromoCode, siteSettings } = useStore();
   const navigate = useNavigate();
   const [distance, setDistance] = useState<number | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
@@ -52,12 +52,12 @@ export const Checkout = () => {
   const subtotalBeforeDiscount = cart.reduce((sum, item) => sum + ((isStudentVerified ? item.student_price : item.base_price) * item.quantity), 0);
   const itemTotal = getTotalPrice();
   const discountAmount = subtotalBeforeDiscount - itemTotal;
-  const platformFee = 5;
-  const gstAndCharges = Math.round(itemTotal * 0.05);
+  const platformFee = siteSettings.platform_fee;
+  const gstAndCharges = Math.round(itemTotal * (siteSettings.gst_rate / 100));
   const isTakeaway = orderMode === 'takeaway';
   const activeCollege = selectedCollege && selectedCollege !== 'Other (Use GPS / Map Location)';
   const isTooFar = !isTakeaway && !activeCollege && distance !== null && distance > MAX_DELIVERY_RADIUS_KM;
-  const deliveryFee = isTakeaway ? 0 : ((distance !== null && distance <= MAX_DELIVERY_RADIUS_KM && distance > 3) ? 40 : 20);
+  const deliveryFee = isTakeaway ? 0 : ((distance !== null && distance <= MAX_DELIVERY_RADIUS_KM && distance > siteSettings.delivery_fee_threshold_km) ? siteSettings.delivery_fee_far : siteSettings.delivery_fee_near);
 
   const grandTotal = itemTotal + (isTakeaway ? 0 : platformFee) + gstAndCharges + deliveryFee;
 

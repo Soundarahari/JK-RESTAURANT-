@@ -1,14 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useStore, isAdmin as checkIsAdmin, isRoleManager as checkIsManager, Category, ADMIN_EMAILS } from '../store';
 import { Product } from '../data/mock';
-import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, ChevronUp, ShieldAlert, Smartphone, Maximize2, ExternalLink, Upload, RefreshCw, Trash2 } from 'lucide-react';
+import { X, TrendingUp, ShoppingBag, Plus, Edit2, Save, Search, ChevronDown, ChevronUp, ShieldAlert, Smartphone, Maximize2, ExternalLink, Upload, RefreshCw, Trash2, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ImageCropper } from '../components/ImageCropper';
 
 
 export const Admin = () => {
-  const { products, updateProduct, addProduct, deleteProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories, toggleDriverRole, toggleRoleManagerRole, reorderCategories } = useStore();
+  const { products, updateProduct, addProduct, deleteProduct, fetchProducts, user, adminOrders, fetchOrders, fetchCustomers, customers, updateOrderStatus, promos, addPromo, deletePromo, togglePromo, categories, addCategory, updateCategory, fetchCategories, toggleDriverRole, toggleRoleManagerRole, reorderCategories, siteSettings, updateSiteSetting, fetchSiteSettings } = useStore();
   const navigate = useNavigate();
   
   // 1. Authorization check
@@ -17,7 +17,7 @@ export const Admin = () => {
   const isAuthorized = isAdmin || isManager;
 
   // 2. Component State Hooks
-  const [activeTab, setActiveTab] = useState<'orders' | 'promos' | 'menu' | 'users'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'promos' | 'menu' | 'users' | 'settings'>('orders');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newDish, setNewDish] = useState<Partial<Product>>({ 
     is_available: true, 
@@ -54,6 +54,28 @@ export const Admin = () => {
   const [deleteConfirmProduct, setDeleteConfirmProduct] = useState<Product | null>(null);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [cropperSrc, setCropperSrc] = useState<string | null>(null);
+
+  // Settings tab state
+  const [settingsForm, setSettingsForm] = useState({
+    platform_fee: String(siteSettings.platform_fee),
+    gst_rate: String(siteSettings.gst_rate),
+    delivery_fee_near: String(siteSettings.delivery_fee_near),
+    delivery_fee_far: String(siteSettings.delivery_fee_far),
+    delivery_fee_threshold_km: String(siteSettings.delivery_fee_threshold_km),
+  });
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsSaved, setSettingsSaved] = useState(false);
+
+  // Sync settingsForm when siteSettings loads from DB
+  useEffect(() => {
+    setSettingsForm({
+      platform_fee: String(siteSettings.platform_fee),
+      gst_rate: String(siteSettings.gst_rate),
+      delivery_fee_near: String(siteSettings.delivery_fee_near),
+      delivery_fee_far: String(siteSettings.delivery_fee_far),
+      delivery_fee_threshold_km: String(siteSettings.delivery_fee_threshold_km),
+    });
+  }, [siteSettings]);
 
 
   useEffect(() => {
@@ -365,6 +387,14 @@ export const Admin = () => {
           >
             USERS
           </button>
+          {isAdmin && (
+            <button 
+              onClick={() => setActiveTab('settings')}
+              className={`px-6 py-2.5 text-xs font-black rounded-xl transition-all flex-shrink-0 whitespace-nowrap shadow-sm active:scale-95 flex items-center gap-1.5 ${activeTab === 'settings' ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
+            >
+              <Settings size={13} /> SETTINGS
+            </button>
+          )}
         </div>
       </div>
 
@@ -1510,6 +1540,176 @@ export const Admin = () => {
               >
                 <Save size={18} /> Save to Menu
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════ SETTINGS TAB ═══════════════════════ */}
+      {activeTab === 'settings' && isAdmin && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-brand-100 dark:bg-brand-900/30 rounded-xl flex items-center justify-center">
+                <Settings size={20} className="text-brand-600 dark:text-brand-400" />
+              </div>
+              <div>
+                <h3 className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wider">Checkout Fee Settings</h3>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest mt-0.5">These values appear on the checkout page</p>
+              </div>
+            </div>
+
+            {settingsSaved && (
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3 mb-5 flex items-center gap-2 animate-in fade-in slide-in-from-top duration-300">
+                <span className="text-green-600 dark:text-green-400 text-sm">✅</span>
+                <p className="text-xs font-bold text-green-700 dark:text-green-400">Settings saved successfully! Checkout page will reflect the updated values.</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Platform Fee */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Platform Fee</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-black text-gray-400">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={settingsForm.platform_fee}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, platform_fee: e.target.value })}
+                    className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-gray-800 dark:text-gray-200"
+                  />
+                </div>
+                <p className="text-[9px] text-gray-400 mt-1.5 font-medium">Charged per delivery order (not for takeaway)</p>
+              </div>
+
+              {/* GST Rate */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">GST & Charges Rate</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={settingsForm.gst_rate}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, gst_rate: e.target.value })}
+                    className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-gray-800 dark:text-gray-200"
+                  />
+                  <span className="text-lg font-black text-gray-400">%</span>
+                </div>
+                <p className="text-[9px] text-gray-400 mt-1.5 font-medium">Applied on item total (e.g. 5 = 5%)</p>
+              </div>
+
+              {/* Delivery Fee Near */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Delivery Fee (Near)</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-black text-gray-400">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={settingsForm.delivery_fee_near}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, delivery_fee_near: e.target.value })}
+                    className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-gray-800 dark:text-gray-200"
+                  />
+                </div>
+                <p className="text-[9px] text-gray-400 mt-1.5 font-medium">For orders within {settingsForm.delivery_fee_threshold_km || '3'} km radius</p>
+              </div>
+
+              {/* Delivery Fee Far */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Delivery Fee (Far)</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-black text-gray-400">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={settingsForm.delivery_fee_far}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, delivery_fee_far: e.target.value })}
+                    className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-gray-800 dark:text-gray-200"
+                  />
+                </div>
+                <p className="text-[9px] text-gray-400 mt-1.5 font-medium">For orders beyond {settingsForm.delivery_fee_threshold_km || '3'} km radius</p>
+              </div>
+
+              {/* Distance Threshold */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700 md:col-span-2">
+                <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Distance Threshold</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={settingsForm.delivery_fee_threshold_km}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, delivery_fee_threshold_km: e.target.value })}
+                    className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-gray-800 dark:text-gray-200 max-w-[200px]"
+                  />
+                  <span className="text-sm font-black text-gray-400">km</span>
+                </div>
+                <p className="text-[9px] text-gray-400 mt-1.5 font-medium">Orders within this distance pay "Near" fee, beyond pay "Far" fee</p>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="mt-6 flex items-center gap-3">
+              <button
+                onClick={async () => {
+                  setIsSavingSettings(true);
+                  setSettingsSaved(false);
+                  const keys = Object.keys(settingsForm) as (keyof typeof settingsForm)[];
+                  let hasError = false;
+                  for (const key of keys) {
+                    const result = await updateSiteSetting(key, settingsForm[key]);
+                    if (!result.success) {
+                      hasError = true;
+                      alert(`Failed to save ${key}: ${result.error}`);
+                      break;
+                    }
+                  }
+                  if (!hasError) {
+                    setSettingsSaved(true);
+                    await fetchSiteSettings();
+                    setTimeout(() => setSettingsSaved(false), 4000);
+                  }
+                  setIsSavingSettings(false);
+                }}
+                disabled={isSavingSettings}
+                className="bg-brand-500 hover:bg-brand-600 text-white font-black py-3 px-8 rounded-xl text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-brand-500/20"
+              >
+                <Save size={14} />
+                {isSavingSettings ? 'Saving...' : 'Save All Settings'}
+              </button>
+            </div>
+
+            {/* Live Preview */}
+            <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
+              <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Live Preview — How checkout will look</h4>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700 max-w-sm space-y-2 text-sm font-bold text-gray-600 dark:text-gray-300">
+                <div className="flex justify-between">
+                  <span>Item Total</span>
+                  <span>₹500</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Delivery Fee</span>
+                  <span className="text-brand-500">₹{settingsForm.delivery_fee_near || '0'} — ₹{settingsForm.delivery_fee_far || '0'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Platform Fee</span>
+                  <span>₹{settingsForm.platform_fee || '0'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>GST & Charges ({settingsForm.gst_rate || '0'}%)</span>
+                  <span>₹{Math.round(500 * (parseFloat(settingsForm.gst_rate) || 0) / 100)}</span>
+                </div>
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-600 flex justify-between font-black text-gray-900 dark:text-white">
+                  <span>Grand Total</span>
+                  <span>₹{500 + (parseFloat(settingsForm.platform_fee) || 0) + Math.round(500 * (parseFloat(settingsForm.gst_rate) || 0) / 100) + (parseFloat(settingsForm.delivery_fee_near) || 0)}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
