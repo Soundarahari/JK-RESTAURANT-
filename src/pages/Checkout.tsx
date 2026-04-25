@@ -294,6 +294,22 @@ export const Checkout = () => {
     }
   }, [cart.length, navigate]);
 
+  // Auto-show student promo dialog once per session for non-student users
+  useEffect(() => {
+    const isStudent = user?.is_student || appliedPromoCode?.discount_type === 'student_offer';
+    const alreadyShown = sessionStorage.getItem('jk-student-dialog-shown');
+    const hasStudentPrices = cart.some(item => item.student_price < item.base_price);
+    
+    if (!isStudent && !appliedPromoCode && hasStudentPrices && !alreadyShown && cart.length > 0) {
+      // Small delay so the page renders first
+      const timer = setTimeout(() => {
+        setShowStudentDialog(true);
+        sessionStorage.setItem('jk-student-dialog-shown', 'true');
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   if (cart.length === 0) return null;
 
   // Check if any product has a cheaper student price
