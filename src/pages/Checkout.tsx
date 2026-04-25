@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
-import { Navigation, Edit3, ShoppingBag, Package, ArrowLeft, CreditCard, Shield, AlertCircle, Banknote } from 'lucide-react';
+import { Navigation, Edit3, ShoppingBag, Package, ArrowLeft, CreditCard, Shield, AlertCircle, Banknote, GraduationCap, X } from 'lucide-react';
 import { calculateDistance, RESTAURANT_COORDS, MAX_DELIVERY_RADIUS_KM } from '../utils/geo';
 
 // Razorpay type declaration for the global checkout script
@@ -28,6 +28,8 @@ export const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
   const [validationErrors, setValidationErrors] = useState<{ phone?: string; address?: string; location?: string }>({});
   const [hasAttemptedPay, setHasAttemptedPay] = useState(false);
+  const [showStudentDialog, setShowStudentDialog] = useState(false);
+  const [studentPromoInput, setStudentPromoInput] = useState('');
 
   const COLLEGES = [
     { name: "Excel INSTITUTIONS", lat: 11.449777022281602, lng: 77.77186479045226 },
@@ -294,8 +296,89 @@ export const Checkout = () => {
 
   if (cart.length === 0) return null;
 
+  // Check if any product has a cheaper student price
+  const hasStudentPricing = cart.some(item => item.student_price < item.base_price);
+  const potentialSavings = cart.reduce((sum, item) => sum + ((item.base_price - item.student_price) * item.quantity), 0);
+  const isStudentVerifiedLocal = user?.is_student || appliedPromoCode?.discount_type === 'student_offer';
+
   return (
     <div className="pb-32">
+      {/* Student Promo Dialog */}
+      {showStudentDialog && (
+        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setShowStudentDialog(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-sm p-6 animate-in zoom-in-95 duration-300 border border-gray-100 dark:border-gray-800" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setShowStudentDialog(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-gray-600">
+              <X size={16} />
+            </button>
+            
+            <div className="flex flex-col items-center text-center mb-5">
+              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mb-4">
+                <GraduationCap size={32} className="text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h3 className="font-black text-lg text-gray-900 dark:text-white">Are you a Student?</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Enter your student promo code to unlock <span className="font-black text-emerald-600 dark:text-emerald-400">₹{potentialSavings} savings</span> on this order!
+              </p>
+            </div>
+
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                placeholder="Enter student code"
+                value={studentPromoInput}
+                onChange={(e) => setStudentPromoInput(e.target.value.toUpperCase())}
+                className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 uppercase placeholder:normal-case"
+                autoFocus
+              />
+              <button
+                onClick={() => {
+                  const promo = promos.find(p => p.code.toUpperCase() === studentPromoInput.toUpperCase() && p.is_active);
+                  if (!promo) {
+                    alert('Invalid or inactive promo code.');
+                    return;
+                  }
+                  setAppliedPromoCode(promo);
+                  setStudentPromoInput('');
+                  setShowStudentDialog(false);
+                  sessionStorage.setItem('jk-student-dialog-shown', 'true');
+                }}
+                disabled={!studentPromoInput}
+                className="bg-emerald-500 text-white px-5 font-black rounded-xl text-xs uppercase tracking-widest disabled:opacity-40 active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
+              >
+                Apply
+              </button>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowStudentDialog(false);
+                sessionStorage.setItem('jk-student-dialog-shown', 'true');
+              }}
+              className="w-full text-center text-xs text-gray-400 dark:text-gray-500 font-bold py-2 hover:text-gray-600 transition-colors"
+            >
+              No, I'm not a student — continue
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Student Savings Banner (persistent, non-blocking) */}
+      {!isStudentVerifiedLocal && hasStudentPricing && !showStudentDialog && !appliedPromoCode && (
+        <button
+          onClick={() => setShowStudentDialog(true)}
+          className="w-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-3.5 mb-4 flex items-center gap-3 active:scale-[0.98] transition-all"
+        >
+          <div className="w-9 h-9 bg-emerald-100 dark:bg-emerald-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+            <GraduationCap size={18} className="text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div className="text-left flex-1">
+            <p className="text-xs font-black text-emerald-700 dark:text-emerald-400">Student? Save ₹{potentialSavings} on this order</p>
+            <p className="text-[10px] text-emerald-600/70 dark:text-emerald-500/60 font-medium mt-0.5">Tap to enter your student promo code</p>
+          </div>
+          <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider">Apply →</span>
+        </button>
+      )}
+
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/cart')} className="p-2 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
           <ArrowLeft size={20} />

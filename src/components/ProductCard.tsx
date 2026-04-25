@@ -85,7 +85,12 @@ export const ProductCard = ({ product }: { product: Product }) => {
                 </div>
               </>
             ) : (
-              <span className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">₹{product.base_price}</span>
+              <>
+                <span className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">₹{product.base_price}</span>
+                {product.student_price < product.base_price && (
+                  <span className="text-[10px] font-bold text-emerald-500 dark:text-emerald-400">🎓 Students: ₹{product.student_price}</span>
+                )}
+              </>
             )}
           </div>
 
